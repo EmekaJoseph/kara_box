@@ -5,13 +5,23 @@ export const userSongsStore = defineStore('songsStore', () => {
   const selectedSong = ref<string>('')
   const playModal = ref<boolean>(false)
 
-  const songsArchive = ref<string[]>([
-    'song1.mp4', 'song2.mp4'
-  ])
+  const archive: string[] = [
+    'Victory Worship-Safe.mp4',
+    'Christ Is Enough.mp4'
+  ]
 
   function setSong(songName: string) {
     selectedSong.value = songName
   }
 
-  return { selectedSong, setSong, songsArchive, playModal }
+  function songName(name: string) {
+    return name.replace(/\.mp4$/, '')
+  }
+
+  function playSong(song: string) {
+    selectedSong.value = song
+    playModal.value = !playModal.value
+  }
+
+  return { selectedSong, setSong, archive, playModal, songName, playSong }
 })

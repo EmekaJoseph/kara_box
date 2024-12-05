@@ -1,33 +1,26 @@
 <template>
     <div>
-        <!-- Modal trigger button -->
-        <button type="button" ref="modalOpen d-none" class="" data-bs-toggle="modal" data-bs-target="#modalId">
+
+        <button type="button" ref="modalOpen" class="d-none" data-bs-toggle="modal" data-bs-target="#modalId">
             Launch
         </button>
 
-        <!-- Modal Body -->
-        <!-- if you want to close by clicking outside the modal, delete the last endpoint:data-bs-backdrop and data-bs-keyboard -->
+
         <div class="modal fade" id="modalId" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false"
             role="dialog" aria-labelledby="modalTitleId" aria-hidden="true">
-            <div class="modal-dialog  modal-dialog-centered modal-dialog-scrollable modal-xl" role="document">
-                <div class="modal-content">
+            <div class="modal-dialog  modal-dialog-centere modal-dialog-scrollabl" role="document">
+                <div class="modal-content" style="height: 70vh;">
                     <div class="modal-header">
                         <h5 class="modal-title" id="modalTitleId">
-                            &nbsp;
+                            {{ songsStore.songName(songsStore.selectedSong) }}
                         </h5>
-                        <button ref="modalClose" type="button" class="btn-close" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
+                        <button @click="songsStore.selectedSong = ''" ref="modalClose" type="button" class="btn-close"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <video-player class="w-100" src="/videos/Shout To The Lord .mp4" controls :loop="true"
-                            :volume="0.6" />
+                        <video-player v-if="songsStore.selectedSong" class="w-100 h-100"
+                            :src="'/videos/' + songsStore.selectedSong" controls :loop="true" :volume="0.6" />
                     </div>
-                    <!-- <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Close
-                        </button>
-                        <button type="button" class="btn btn-primary">Save</button>
-                    </div> -->
                 </div>
             </div>
         </div>
@@ -49,11 +42,13 @@ const songsStore = userSongsStore()
 
 
 watch(() => songsStore.playModal, () => {
+    console.log(songsStore.playModal);
+
     modalOpen.value.click()
 })
 
 onBeforeRouteLeave(() => {
-    modalClose.value.click
+    modalClose.value.click()
 })
 
 </script>

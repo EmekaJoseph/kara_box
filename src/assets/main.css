@@ -4,6 +4,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
 
 
+
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+.page-link:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #3685d3 !important;
+}
+
+
 *,
 *::before,
 *::after {
@@ -35,4 +48,27 @@ body {
 ::-webkit-scrollbar-thumb {
   background-color: #cccccc;
   border-radius: 5px;
+}
+
+.btn-theme{
+  background-color: #48214A !important;
+  color: #ffffff !important;
+}
+
+
+.btn-theme:hover{
+  background-color: #3f1941 !important;
+}
+
+.btn-play{
+  background-color: #561942 !important;
+  color: #ffffff !important;
+}
+
+.btn-play:hover{
+  background-color: #561942 !important;
+}
+
+.cursor-pointer{
+  cursor: pointer;
 }
