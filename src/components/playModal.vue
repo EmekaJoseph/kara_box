@@ -19,7 +19,7 @@
                     </div>
                     <div class="modal-body">
                         <video-player v-if="songsStore.isPlayingSong" class="w-100 h-100"
-                            :src="'/videos/' + songsStore.selectedSong" controls :loop="true" :volume="0.6" />
+                            :src="songsStore.songsDir + songsStore.selectedSong" controls :loop="true" :volume="0.6" />
                     </div>
                 </div>
             </div>

@@ -5,7 +5,7 @@
                 type="text">
         </div>
         <div class="col-12">
-            <div class="card content-bg p-2" style="overflow-y: auto;">
+            <div class="card content-bg p-2" style="height: 300px;; overflow-y: auto;">
                 <ul class="list-group list-group-flush">
                     <li @click="songsStore.playSong(song)" v-for="(song, idx) in filteredItems" :key="song"
                         class="list-group-item cursor-pointer bg-transparent">

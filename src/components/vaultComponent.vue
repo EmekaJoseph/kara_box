@@ -11,7 +11,8 @@
         </div>
 
         <div class="col-2">
-            <button @click="resetShufle" class="btn btn-dark btn-lg w-100">
+            <button :disabled="songsStore.archive.length == vaultSongs.length" @click="resetShufle"
+                class="btn btn-dark btn-lg w-100">
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
         </div>
