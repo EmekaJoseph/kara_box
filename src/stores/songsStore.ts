@@ -1,18 +1,13 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import songsData from './songs.json';
 
 export const userSongsStore = defineStore('songsStore', () => {
   const selectedSong = ref<string>('')
   const playModal = ref<boolean>(false)
+  const isPlayingSong = ref<boolean>(false)
 
-  const archive: string[] = [
-    'Victory Worship-Safe.mp4',
-    'Christ Is Enough.mp4'
-  ]
-
-  function setSong(songName: string) {
-    selectedSong.value = songName
-  }
+  const archive: string[] = songsData.songs
 
   function songName(name: string) {
     return name.replace(/\.mp4$/, '')
@@ -21,7 +16,8 @@ export const userSongsStore = defineStore('songsStore', () => {
   function playSong(song: string) {
     selectedSong.value = song
     playModal.value = !playModal.value
+    isPlayingSong.value = true
   }
 
-  return { selectedSong, setSong, archive, playModal, songName, playSong }
+  return { selectedSong, archive, playModal, songName, playSong, isPlayingSong }
 })

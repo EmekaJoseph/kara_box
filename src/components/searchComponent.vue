@@ -1,14 +1,15 @@
 <template>
     <div class="row g-3">
         <div class="col-12">
-            <input v-model="searchQuery" class="form-control form-control-lg" placeholder="search here.." type="text">
+            <input v-model="searchQuery" class="form-control form-control-lg bg-light" placeholder="search here.."
+                type="text">
         </div>
         <div class="col-12">
-            <div class="card bg-light-subtle p-2" style="height: 300px; overflow-y: auto;">
+            <div class="card content-bg p-2" style="overflow-y: auto;">
                 <ul class="list-group list-group-flush">
                     <li @click="songsStore.playSong(song)" v-for="(song, idx) in filteredItems" :key="song"
-                        class="list-group-item cursor-pointer">
-                        <span class="fw-bold">{{ (idx + 1) }}.</span> {{ songsStore.songName(song) }}
+                        class="list-group-item cursor-pointer bg-transparent">
+                        <i class="bi bi-play-btn-fill"></i> {{ songsStore.songName(song) }}
                     </li>
                 </ul>
 
@@ -38,7 +39,6 @@ const filteredItems = computed(() => {
 </script>
 
 <style scoped>
-/* Add specific styles for spinner loading if needed */
 .loading-spinner {
     display: flex;
     justify-content: center;
@@ -47,6 +47,7 @@ const filteredItems = computed(() => {
 
 .list-group-item:hover {
     background-color: #f5f5e8;
-    color: #3f3f0b;
+    color: #3B214A;
+    font-weight: bolder;
 }
 </style>

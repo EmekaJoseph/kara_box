@@ -16,15 +16,14 @@
             </button>
         </div>
         <div class="col-12">
-            <div class="card bg-light-subtle d-flex justify-content-center align-items-center"
-                :class="{ 'loading-spinner': isLoading }" style="min-height: 300px;">
+            <div class="card content-bg d-flex justify-content-center align-items-center"
+                :class="{ 'loading-spinner': isLoading }">
                 <div v-html="resultText"></div>
-                <button @click="songsStore.playSong(songsStore.selectedSong)" v-if="songsStore.selectedSong"
-                    class="btn btn-success btn-sm">
+                <button @click="songsStore.playSong(songsStore.selectedSong)"
+                    v-if="songsStore.selectedSong && resultText" class="btn btn-play btn-sm p-0 px-3">
                     <i class="bi bi-play-fill"></i>
                 </button>
             </div>
-
         </div>
     </div>
 </template>
@@ -48,6 +47,7 @@ function getRandomItem<T>(arr: T[]): T {
 
 // Main Function
 function getRandomSong(): void {
+    songsStore.selectedSong = ''
     const shuffleDuration = 10; // duration in seconds
     let secondsLeft = shuffleDuration;
 
@@ -56,7 +56,6 @@ function getRandomSong(): void {
 
     const timer = setInterval(() => {
         secondsLeft--;
-        songsStore.selectedSong = ''
 
         if (secondsLeft === 0) {
             clearInterval(timer);
@@ -70,7 +69,7 @@ function getRandomSong(): void {
                 // Remove the selected song from the archive
                 vaultSongs.value = vaultSongs.value.filter((song) => song !== randomSong);
             } else {
-                resultText.value = generateErrorHTML("End of Song!");
+                resultText.value = generateErrorHTML("End of Songs!");
             }
         }
     }, 200);
@@ -79,14 +78,14 @@ function getRandomSong(): void {
 // Helper Functions for HTML Generation
 function generateSpinnerHTML(): string {
     return `
-      <div class="spinner-border text-danger" role="status" style="height: 60px; width: 60px;">
+      <div class="spinner-border text-warning" role="status" style="height: 60px; width: 60px;">
         <span class="visually-hidden">Loading...</span>
       </div>`;
 }
 
 function generateSuccessHTML(song: string): string {
     return `
-      <div class="fs-1 fw-bold text-success-emphasis text-center">
+      <div class="fs-2 fw-bold text-success-emphasis text-center">
         ${songsStore.songName(song)}
       </div>`;
 }

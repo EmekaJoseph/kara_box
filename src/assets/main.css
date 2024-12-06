@@ -3,9 +3,6 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
 
-
-
-
 input:focus,
 select:focus,
 textarea:focus,
@@ -61,14 +58,19 @@ body {
 }
 
 .btn-play{
-  background-color: #561942 !important;
+  background-color: #5f6b30 !important;
   color: #ffffff !important;
 }
 
 .btn-play:hover{
-  background-color: #561942 !important;
+  background-color: #424A21 !important;
 }
 
 .cursor-pointer{
   cursor: pointer;
+}
+
+.content-bg{
+  background-color: #d9e3ac4a;
+  min-height: 300px;
 }

@@ -51,9 +51,6 @@ import playModal from '@/components/playModal.vue';
 import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
 
-
-
-
 </script>
 
 <style scoped>

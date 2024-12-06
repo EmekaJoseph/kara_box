@@ -14,11 +14,11 @@
                         <h5 class="modal-title" id="modalTitleId">
                             {{ songsStore.songName(songsStore.selectedSong) }}
                         </h5>
-                        <button @click="songsStore.selectedSong = ''" ref="modalClose" type="button" class="btn-close"
-                            data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button @click="songsStore.isPlayingSong = false" ref="modalClose" type="button"
+                            class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <video-player v-if="songsStore.selectedSong" class="w-100 h-100"
+                        <video-player v-if="songsStore.isPlayingSong" class="w-100 h-100"
                             :src="'/videos/' + songsStore.selectedSong" controls :loop="true" :volume="0.6" />
                     </div>
                 </div>
