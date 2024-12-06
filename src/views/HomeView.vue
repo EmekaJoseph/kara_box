@@ -8,8 +8,15 @@
             KARAOKE BOX
           </div>
           <div class="card border-0 shadow-sm" style="min-height: 450px;">
+            <div class="card-header border-0">
+              <div class="float-end">
+                <select class="form-select form-select-sm" v-model="songsStore.songsType">
+                  <option value="all">All</option>
+                  <option value="safe">Safe</option>
+                </select>
+              </div>
+            </div>
             <div class="card-body">
-
               <ul class="nav nav-tabs" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
                   <button class="nav-link active" id="vault-tab" data-bs-toggle="tab" data-bs-target="#vault"
@@ -23,8 +30,8 @@
                     <i class="bi bi-search"></i> List
                   </button>
                 </li>
-              </ul>
 
+              </ul>
               <!-- Tab panes -->
               <div class="tab-content p-3">
                 <div class="tab-pane active" id="vault" role="tabpanel" aria-labelledby="vault-tab">
@@ -34,9 +41,7 @@
                   <SearchComponent />
                 </div>
               </div>
-
             </div>
-
           </div>
         </div>
       </div>
@@ -50,15 +55,13 @@
 import playModal from '@/components/playModal.vue';
 import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
+import { userSongsStore } from '@/stores/songsStore';
+
+const songsStore = userSongsStore()
 
 </script>
 
 <style scoped>
-/* .video-player {
-  width: 100%;
-
-} */
-
 .nav-link {
   color: var(--bs-text-muted);
   border: none;

@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { userSongsStore } from "@/stores/songsStore";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 
 const songsStore = userSongsStore();
@@ -45,6 +45,9 @@ const vaultSongs = ref<string[]>(songsStore.archive)
 function getRandomItem<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
 }
+
+
+watch(() => songsStore.songsType, () => { resetVault() })
 
 // Main Function
 function getRandomSong(): void {
@@ -98,11 +101,15 @@ function generateErrorHTML(message: string): string {
       </div>`;
 }
 
+function resetVault() {
+    songsStore.selectedSong = ''
+    resultText.value = ''
+    vaultSongs.value = [...songsStore.archive];
+}
+
 function resetShufle() {
     if (confirm('This will clear and re-shuffle all songs. Do you want to continue?')) {
-        songsStore.selectedSong = ''
-        resultText.value = ''
-        vaultSongs.value = [...songsStore.archive];
+        resetVault()
     }
 }
 </script>
