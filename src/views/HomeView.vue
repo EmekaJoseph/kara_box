@@ -13,9 +13,9 @@
             KARAOKE BOX
           </div> -->
           <div class="card border-0 shadow-sm" style="min-height: 450px;">
-            <div class="card-header border-0">
+            <div class="card-header border-0 fw-bold">
               <i class="bi bi-mic-fill"></i>
-              <i class="bi bi-headphones"></i>
+              KARAOKE BOX
               <div class="float-end">
                 <select class="form-select form-select-sm" v-model="songsStore.songsType">
                   <option value="all">All</option>
@@ -37,8 +37,6 @@
                     role="tab" aria-controls="search" aria-selected="false">
                     <i class="bi bi-search"></i>
                     List
-                    <span class="badge rounded-pill bg-secondary-subtle text-dark">{{ songsStore.archive.length
-                      }}</span>
                   </button>
                 </li>
 
@@ -118,7 +116,7 @@ const songsStore = userSongsStore()
 
 .copy-right {
   color: #ffffff;
-  font-size: 11px;
+  font-size: 9px;
   position: fixed;
   bottom: 0;
   right: 0;

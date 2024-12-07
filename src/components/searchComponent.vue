@@ -15,7 +15,7 @@
 
             </div>
             <div class="float-end small">
-                &nbsp;
+                {{ songsStore.archive.length }}
             </div>
         </div>
     </div>
@@ -36,7 +36,6 @@ const filteredItems = computed(() => {
         item.toLowerCase().includes(query)
     );
 });
-
 
 
 </script>
