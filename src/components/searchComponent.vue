@@ -14,6 +14,9 @@
                 </ul>
 
             </div>
+            <div class="float-end small">
+                &nbsp;
+            </div>
         </div>
     </div>
 </template>

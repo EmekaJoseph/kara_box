@@ -1,14 +1,21 @@
 <template>
-  <div class="min-vh-100 base-page " style="background-color:#3A2049;">
+  <div class="min-vh-100 base-page position-relative" style="background-color:#3A2049;">
+    <div class="copy-right">
+      &copy; Proffictech 2024
+      <div class="text-center">08139590011</div>
+
+    </div>
     <div class="container">
 
       <div class="row min-vh-100 justify-content-center align-items-center">
         <div class="col-lg-7">
-          <div class="text-center fw-bolder text-white" style="font-size: 2.3rem;">
+          <!-- <div class="text-center fw-bolder text-white" style="font-size: 2.3rem;">
             KARAOKE BOX
-          </div>
+          </div> -->
           <div class="card border-0 shadow-sm" style="min-height: 450px;">
             <div class="card-header border-0">
+              <i class="bi bi-mic-fill"></i>
+              <i class="bi bi-headphones"></i>
               <div class="float-end">
                 <select class="form-select form-select-sm" v-model="songsStore.songsType">
                   <option value="all">All</option>
@@ -21,18 +28,21 @@
                 <li class="nav-item" role="presentation">
                   <button class="nav-link active" id="vault-tab" data-bs-toggle="tab" data-bs-target="#vault"
                     type="button" role="tab" aria-controls="vault" aria-selected="true">
-                    <i class="bi bi-box-seam-fill"></i> Vault
+                    <i class="bi bi-box-seam-fill"></i>
+                    Vault
                   </button>
                 </li>
                 <li class="nav-item" role="presentation">
                   <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button"
                     role="tab" aria-controls="search" aria-selected="false">
-                    <i class="bi bi-search"></i> List
+                    <i class="bi bi-search"></i>
+                    List
+                    <span class="badge rounded-pill bg-secondary-subtle text-dark">{{ songsStore.archive.length
+                      }}</span>
                   </button>
                 </li>
 
               </ul>
-              <!-- Tab panes -->
               <div class="tab-content p-3">
                 <div class="tab-pane active" id="vault" role="tabpanel" aria-labelledby="vault-tab">
                   <VaultComponent />
@@ -65,9 +75,11 @@ const songsStore = userSongsStore()
 .nav-link {
   color: var(--bs-text-muted);
   border: none;
+  padding-inline: 30px !important;
 }
 
 .nav-link.active {
+  font-weight: bold;
   border-bottom: 2px #204935 solid !important;
 }
 
@@ -81,6 +93,7 @@ const songsStore = userSongsStore()
   background-size: cover;
   background-position: center center;
 }
+
 
 
 .base-page::after {
@@ -100,5 +113,16 @@ const songsStore = userSongsStore()
   position: relative;
   z-index: 2;
   /* Ensures content stays above the tint */
+}
+
+
+.copy-right {
+  color: #ffffff;
+  font-size: 11px;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  margin-right: 20px;
+  margin-bottom: 20px;
 }
 </style>

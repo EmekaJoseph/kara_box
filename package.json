@@ -14,7 +14,8 @@
     "electron:build": "vite build && electron-builder"
   },
   "build": {
-    "appId": "com.example.app",
+    "appId": "karaoke.box",
+    "productName": "KaraokeBox",
     "directories": {
       "output": "dist/electron"
     },
@@ -22,9 +23,9 @@
       "dist/**/*",
       "electron/**/*"
     ],
-    "mac": {},
-    "win": {},
-    "linux": {}
+    "mac": {"target": "dmg"},
+    "win": { "target": "nsis"},
+    "linux": {"target": "AppImage"}
   },
   "dependencies": {
     "bootstrap": "^5.3.3",

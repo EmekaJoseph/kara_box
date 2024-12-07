@@ -8,12 +8,12 @@
 
         <div class="modal fade" id="modalId" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false"
             role="dialog" aria-labelledby="modalTitleId" aria-hidden="true">
-            <div class="modal-dialog  modal-dialog-centere modal-dialog-scrollabl" role="document">
+            <div class="modal-dialog  modal-dialog-centere modal-dialog-scrollable" role="document">
                 <div class="modal-content" style="height: 70vh;">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="modalTitleId">
+                        <h6 class="modal-title" id="modalTitleId">
                             {{ songsStore.songName(songsStore.selectedSong) }}
-                        </h5>
+                        </h6>
                         <button @click="songsStore.isPlayingSong = false" ref="modalClose" type="button"
                             class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
@@ -31,7 +31,7 @@
                         <input ref="fileBrowserBtn" type="file" class="d-none"
                             accept="video/mp4, video/webm, video/ogg" />
                         <button @click="fileBrowserBtn.click()" class="btn btn-theme btn-sm">
-                            Browse folder <i class="bi bi-folder-fill"></i>
+                            <i class="bi bi-folder-fill"></i>
                         </button>
                     </div>
                 </div>

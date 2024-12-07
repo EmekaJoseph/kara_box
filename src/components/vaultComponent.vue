@@ -2,11 +2,7 @@
     <div class="row g-3">
         <div class="col-10">
             <button @click="getRandomSong" class="btn btn-theme btn-lg w-100">
-                <i class="bi bi-shuffle"></i> SHUFFLE SONGS
-                <span class="badge rounded-pill bg-light text-dark">
-                    {{ vaultSongs.length }}
-                </span>
-
+                <i class="bi bi-arrow-repeat"></i> CLICK TO SPIN
             </button>
         </div>
 
@@ -24,6 +20,9 @@
                     v-if="songsStore.selectedSong && resultText" class="btn btn-play btn-sm p-0 px-3">
                     <i class="bi bi-play-fill"></i>
                 </button>
+            </div>
+            <div class="float-end small">
+                -{{ vaultSongs.length }}
             </div>
         </div>
     </div>
