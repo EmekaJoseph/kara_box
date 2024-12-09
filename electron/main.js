@@ -1,9 +1,8 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 // const path = require('path');
-import path from 'path'
-
-import { dirname } from 'path';
+import path, { dirname } from 'path'
 import { fileURLToPath } from 'url';
+import { readdirSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +28,20 @@ function createWindow() {
 
     console.log('Vue app path:', path.join(__dirname, '../dist/index.html'));
 }
+
+
+// Handle folder reading via IPC
+ipcMain.handle('read-folder', async (event, folderPath) => {
+    try {
+        const files = readdirSync(folderPath); // Synchronous read
+        return files; // Return the list of files to the renderer
+    } catch (err) {
+        console.error('Error reading folder:', err);
+        throw err; // Throw the error to be handled in the renderer
+    }
+});
+
+
 
 app.on('ready', createWindow);
 

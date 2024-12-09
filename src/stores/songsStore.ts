@@ -1,16 +1,17 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import songsData from './songs.json';
+// import songsData from './songs.json';
 
 export const userSongsStore = defineStore('songsStore', () => {
   const selectedSong = ref<string>('')
   const playModal = ref<boolean>(false)
   const isPlayingSong = ref<boolean>(false)
 
-  const songsType = ref<'all' | 'safe'>('safe')
+  const folderName = ref<string>('karaoke_box')
 
-  const archive = computed<string[]>(() => { return songsData[songsType.value] })
-  const songsDir = computed<string>(() => { return `/videos/${songsType.value}/` })
+  // const archive = computed<string[]>(() => { return songsData[songsType.value] })
+  const archive = ref<string[]>([])
+  const songsDir = computed<string>(() => { return `/${folderName.value}/` })
 
   function songName(name: string) {
     return name.replace(/\.mp4$/, '')
@@ -30,6 +31,5 @@ export const userSongsStore = defineStore('songsStore', () => {
     playSong,
     isPlayingSong,
     songsDir,
-    songsType
   }
 })

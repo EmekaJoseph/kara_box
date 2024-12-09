@@ -1,5 +1,5 @@
 <template>
-  <div class="min-vh-100 base-page position-relative" style="background-color:#3A2049;">
+  <div class="min-vh-100 base-page" style="background-color:#3A2049;">
     <div class="copy-right">
       &copy; Proffictech 2024
       <div class="text-center">08139590011</div>
@@ -8,20 +8,17 @@
     <div class="container">
 
       <div class="row min-vh-100 justify-content-center align-items-center">
-        <div class="col-lg-7">
-          <!-- <div class="text-center fw-bolder text-white" style="font-size: 2.3rem;">
-            KARAOKE BOX
-          </div> -->
+        <div class="col-lg-8">
           <div class="card border-0 shadow-sm" style="min-height: 450px;">
             <div class="card-header border-0 fw-bold">
               <i class="bi bi-mic-fill"></i>
               KARAOKE BOX
-              <div class="float-end">
+              <!-- <div class="float-end">
                 <select class="form-select form-select-sm" v-model="songsStore.songsType">
                   <option value="all">All</option>
                   <option value="safe">Safe</option>
                 </select>
-              </div>
+              </div> -->
             </div>
             <div class="card-body">
               <ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -64,8 +61,20 @@ import playModal from '@/components/playModal.vue';
 import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
 import { userSongsStore } from '@/stores/songsStore';
+import { onMounted } from 'vue';
 
 const songsStore = userSongsStore()
+
+
+onMounted(() => {
+  loadSongsInFolder()
+})
+
+async function loadSongsInFolder() {
+  //@ts-ignore
+  const songs = await window.electronAPI.readFolder(songsStore.songsDir);
+  songsStore.archive = songs
+}
 
 </script>
 
@@ -116,7 +125,7 @@ const songsStore = userSongsStore()
 
 .copy-right {
   color: #ffffff;
-  font-size: 9px;
+  font-size: 11px;
   position: fixed;
   bottom: 0;
   right: 0;

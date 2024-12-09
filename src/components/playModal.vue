@@ -30,7 +30,7 @@
                     <div class="modal-footer">
                         <input ref="fileBrowserBtn" type="file" class="d-none"
                             accept="video/mp4, video/webm, video/ogg" />
-                        <button @click="fileBrowserBtn.click()" class="btn btn-theme btn-sm">
+                        <button @click="openFolder" class="btn btn-theme btn-sm">
                             <i class="bi bi-folder-fill"></i>
                         </button>
                     </div>
@@ -50,6 +50,10 @@ const modalClose = ref<any>(null)
 const songsStore = userSongsStore()
 
 const fileBrowserBtn = ref<any>(null)
+
+async function openFolder() {
+    fileBrowserBtn.value.click()
+}
 
 
 watch(() => songsStore.playModal, () => {

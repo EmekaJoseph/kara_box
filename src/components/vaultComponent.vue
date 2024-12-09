@@ -7,22 +7,22 @@
         </div>
 
         <div class="col-2">
-            <button :disabled="songsStore.archive.length == vaultSongs.length" @click="resetShufle"
+            <button :disabled="songsStore.archive.length == pageParams.vaultSongs.length" @click="resetShufle"
                 class="btn btn-dark btn-lg w-100">
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
         </div>
         <div class="col-12">
             <div class="card content-bg d-flex justify-content-center align-items-center"
-                :class="{ 'loading-spinner': isLoading }">
-                <div v-html="resultText"></div>
+                :class="{ 'loading-spinner': pageParams.isLoading }">
+                <div v-html="pageParams.resultText"></div>
                 <button @click="songsStore.playSong(songsStore.selectedSong)"
-                    v-if="songsStore.selectedSong && resultText" class="btn btn-play btn-sm p-0 px-3">
+                    v-if="songsStore.selectedSong && pageParams.resultText" class="btn btn-play btn-sm p-0 px-3">
                     <i class="bi bi-play-fill"></i>
                 </button>
             </div>
             <div class="float-end small">
-                -{{ vaultSongs.length }}
+                -{{ pageParams.vaultSongs.length }}
             </div>
         </div>
     </div>
@@ -30,23 +30,28 @@
 
 <script setup lang="ts">
 import { userSongsStore } from "@/stores/songsStore";
-import { ref, watch } from "vue";
-
+import { reactive, ref, watch } from "vue";
 
 const songsStore = userSongsStore();
 
-const resultText = ref<string>("");
-const isLoading = ref<boolean>(false);
+const pageParams = reactive<{ resultText: string, isLoading: boolean, vaultSongs: string[] }>({
+    resultText: "",
+    isLoading: false,
+    vaultSongs: [],
+})
 
-const vaultSongs = ref<string[]>(songsStore.archive)
+// const resultText = ref<string>("");
+// const isLoading = ref<boolean>(false);
+// const vaultSongs = ref<string[]>([])
 
+watch(() => songsStore.archive, () => {
+    pageParams.vaultSongs = songsStore.archive
+})
 
 function getRandomItem<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-
-watch(() => songsStore.songsType, () => { resetVault() })
 
 // Main Function
 function getRandomSong(): void {
@@ -54,25 +59,25 @@ function getRandomSong(): void {
     const shuffleDuration = 10; // duration in seconds
     let secondsLeft = shuffleDuration;
 
-    isLoading.value = true;
-    resultText.value = generateSpinnerHTML();
+    pageParams.isLoading = true;
+    pageParams.resultText = generateSpinnerHTML();
 
     const timer = setInterval(() => {
         secondsLeft--;
 
         if (secondsLeft === 0) {
             clearInterval(timer);
-            isLoading.value = false;
+            pageParams.isLoading = false;
 
-            if (vaultSongs.value.length) {
-                const randomSong = getRandomItem(vaultSongs.value);
+            if (pageParams.vaultSongs.length) {
+                const randomSong = getRandomItem(pageParams.vaultSongs);
                 songsStore.selectedSong = randomSong;
-                resultText.value = generateSuccessHTML(randomSong);
+                pageParams.resultText = generateSuccessHTML(randomSong);
 
                 // Remove the selected song from the archive
-                vaultSongs.value = vaultSongs.value.filter((song) => song !== randomSong);
+                pageParams.vaultSongs = pageParams.vaultSongs.filter((song) => song !== randomSong);
             } else {
-                resultText.value = generateErrorHTML("End of Songs!");
+                pageParams.resultText = generateErrorHTML("End of Songs!");
             }
         }
     }, 200);
@@ -102,8 +107,8 @@ function generateErrorHTML(message: string): string {
 
 function resetVault() {
     songsStore.selectedSong = ''
-    resultText.value = ''
-    vaultSongs.value = [...songsStore.archive];
+    pageParams.resultText = ''
+    pageParams.vaultSongs = [...songsStore.archive];
 }
 
 function resetShufle() {
