@@ -51,6 +51,9 @@
                 </div>
               </div>
             </div>
+            <div v-if="hasIssueFindingFolder" class="card-footer text-center text-danger bg-danger-subtle">
+              Error finding folder: <span class="fw-bold">{{ songsStore.settings.folderName }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -66,10 +69,12 @@ import playModal from '@/components/playModal.vue';
 import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
 import { userSongsStore } from '@/stores/songsStore';
-import { watchEffect } from 'vue';
+import { ref, watchEffect } from 'vue';
 import SettingsComponent from '@/components/settingsComponent.vue';
 
 const songsStore = userSongsStore()
+
+const hasIssueFindingFolder = ref<boolean>(false)
 
 
 watchEffect(() => {
@@ -77,9 +82,14 @@ watchEffect(() => {
 })
 
 async function loadSongsInFolder() {
-  //@ts-ignore
-  const songs = await window.electronAPI.readFolder(songsStore.songsDir);
-  songsStore.archive = songs
+  try {
+    //@ts-ignore
+    const songs = await window.electronAPI.readFolder(songsStore.songsDir);
+    songsStore.archive = songs
+    hasIssueFindingFolder.value = false
+  } catch (error) {
+    hasIssueFindingFolder.value = true
+  }
 }
 
 </script>

@@ -86,8 +86,6 @@ const songsStore = userSongsStore()
 
 const settingsComponentOpen = ref<any>(null)
 
-
-
 watch(() => songsStore.settings.togglePanel, () => {
     form.folder_name = songsStore.settings.folderName
     form.app_title = songsStore.settings.appTitle

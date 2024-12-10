@@ -7,7 +7,7 @@ export const userSongsStore = defineStore('songsStore', () => {
   const selectedSong = ref<string>('')
   const playModal = ref<boolean>(false)
   const isPlayingSong = ref<boolean>(false)
-  // const settingsPanel = ref<boolean>(false)
+
 
   const settings = reactive({
     togglePanel: false,
