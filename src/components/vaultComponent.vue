@@ -1,13 +1,14 @@
 <template>
     <div class="row g-3">
         <div class="col-10">
-            <button @click="getRandomSong" class="btn btn-theme btn-lg w-100">
+            <button v-tooltip title="Spin to Shuffle Songs!" @click="getRandomSong" class="btn btn-theme btn-lg w-100">
                 <i class="bi bi-arrow-repeat"></i> CLICK TO SPIN
             </button>
         </div>
 
         <div class="col-2">
-            <button :disabled="songsStore.archive.length == pageParams.vaultSongs.length" @click="resetShufle"
+            <button v-tooltip title="Reset all songs!"
+                :disabled="songsStore.archive.length == pageParams.vaultSongs.length" @click="resetShufle"
                 class="btn btn-dark btn-lg w-100">
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
@@ -21,7 +22,7 @@
                     <i class="bi bi-play-fill"></i>
                 </button>
             </div>
-            <div class="float-end small">
+            <div v-tooltip title="Number of songs left" class="float-end small">
                 -{{ pageParams.vaultSongs.length }}
             </div>
         </div>
@@ -30,7 +31,7 @@
 
 <script setup lang="ts">
 import { userSongsStore } from "@/stores/songsStore";
-import { reactive, ref, watch } from "vue";
+import { reactive, watch } from "vue";
 
 const songsStore = userSongsStore();
 
@@ -40,9 +41,6 @@ const pageParams = reactive<{ resultText: string, isLoading: boolean, vaultSongs
     vaultSongs: [],
 })
 
-// const resultText = ref<string>("");
-// const isLoading = ref<boolean>(false);
-// const vaultSongs = ref<string[]>([])
 
 watch(() => songsStore.archive, () => {
     pageParams.vaultSongs = songsStore.archive

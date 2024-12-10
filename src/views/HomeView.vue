@@ -1,18 +1,22 @@
 <template>
   <div class="min-vh-100 base-page" style="background-color:#3A2049;">
+    <div @click="songsStore.settings.togglePanel = !songsStore.settings.togglePanel" class="settings-icon">
+      <i class="bi bi-gear-fill"></i>
+    </div>
     <div class="copy-right">
       &copy; Proffictech 2024
       <div class="text-center">08139590011</div>
-
     </div>
     <div class="container">
 
       <div class="row min-vh-100 justify-content-center align-items-center">
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm" style="min-height: 450px;">
-            <div class="card-header border-0 fw-bold">
-              <i class="bi bi-mic-fill"></i>
-              KARAOKE BOX
+            <div class="card-header border-0 fw-bold text-uppercase">
+              {{ songsStore.settings.appTitle }}
+              <div class="float-end text-muted small">
+                <i class="bi bi-mic-fill"></i> KARAOKE BOX
+              </div>
               <!-- <div class="float-end">
                 <select class="form-select form-select-sm" v-model="songsStore.songsType">
                   <option value="all">All</option>
@@ -53,6 +57,7 @@
     </div>
   </div>
   <playModal />
+  <SettingsComponent />
 </template>
 
 
@@ -61,12 +66,13 @@ import playModal from '@/components/playModal.vue';
 import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
 import { userSongsStore } from '@/stores/songsStore';
-import { onMounted } from 'vue';
+import { watchEffect } from 'vue';
+import SettingsComponent from '@/components/settingsComponent.vue';
 
 const songsStore = userSongsStore()
 
 
-onMounted(() => {
+watchEffect(() => {
   loadSongsInFolder()
 })
 
@@ -87,7 +93,7 @@ async function loadSongsInFolder() {
 
 .nav-link.active {
   font-weight: bold;
-  border-bottom: 2px #204935 solid !important;
+  border-bottom: 2px v-bind('songsStore.settings.themeColor') solid !important;
 }
 
 .tab-pane {
@@ -131,5 +137,15 @@ async function loadSongsInFolder() {
   right: 0;
   margin-right: 20px;
   margin-bottom: 20px;
+}
+
+.settings-icon {
+  color: #ffffff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin-left: 20px;
+  margin-top: 20px;
+  cursor: pointer;
 }
 </style>

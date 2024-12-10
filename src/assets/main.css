@@ -47,24 +47,11 @@ body {
   border-radius: 5px;
 }
 
-.btn-theme{
-  background-color: #48214A !important;
-  color: #ffffff !important;
-}
 
 
-.btn-theme:hover{
-  background-color: #3f1941 !important;
-}
 
-.btn-play{
-  background-color: #5f6b30 !important;
-  color: #ffffff !important;
-}
 
-.btn-play:hover{
-  background-color: #424A21 !important;
-}
+
 
 .cursor-pointer{
   cursor: pointer;
