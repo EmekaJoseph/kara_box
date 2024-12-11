@@ -51,7 +51,7 @@
                 </div>
               </div>
             </div>
-            <div v-if="hasIssueFindingFolder" class="card-footer text-center text-danger bg-danger-subtle">
+            <div v-if="songsStore.hasIssueFindingFolder" class="card-footer text-center text-danger bg-danger-subtle">
               Error finding folder: <span class="fw-bold">{{ songsStore.settings.folderName }}</span>
             </div>
           </div>
@@ -74,7 +74,7 @@ import SettingsComponent from '@/components/settingsComponent.vue';
 
 const songsStore = userSongsStore()
 
-const hasIssueFindingFolder = ref<boolean>(false)
+// const hasIssueFindingFolder = ref<boolean>(false)
 
 
 watchEffect(() => {
@@ -86,9 +86,9 @@ async function loadSongsInFolder() {
     //@ts-ignore
     const songs = await window.electronAPI.readFolder(songsStore.songsDir);
     songsStore.archive = songs
-    hasIssueFindingFolder.value = false
+    songsStore.hasIssueFindingFolder = false
   } catch (error) {
-    hasIssueFindingFolder.value = true
+    songsStore.hasIssueFindingFolder = true
   }
 }
 

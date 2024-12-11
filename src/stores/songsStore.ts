@@ -7,7 +7,7 @@ export const userSongsStore = defineStore('songsStore', () => {
   const selectedSong = ref<string>('')
   const playModal = ref<boolean>(false)
   const isPlayingSong = ref<boolean>(false)
-
+  const hasIssueFindingFolder = ref<boolean>(false)
 
   const settings = reactive({
     togglePanel: false,
@@ -16,12 +16,10 @@ export const userSongsStore = defineStore('songsStore', () => {
     themeColor: useStorage('karaoke_box-var_theme', '#48214A')
   })
 
-  // const archive = computed<string[]>(() => { return songsData[songsType.value] })
   const archive = ref<string[]>([])
   const songsDir = computed<string>(() => { return `/${settings.folderName}/` })
 
   function songName(name: string) {
-    // return name.replace(/\.mp4$/, '')
     return name.replace(/\.[^/.]+$/, '');
   }
 
@@ -39,6 +37,7 @@ export const userSongsStore = defineStore('songsStore', () => {
     playSong,
     isPlayingSong,
     songsDir,
-    settings
+    settings,
+    hasIssueFindingFolder
   }
 })

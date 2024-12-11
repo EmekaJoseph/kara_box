@@ -10,16 +10,18 @@ const songsStore = userSongsStore()
 </template>
 
 <style>
-.btn-theme {
-  /* background-color: #48214A !important; */
+:where(.btn-theme, .bg-theme, .btn-play) {
   background-color: v-bind('songsStore.settings.themeColor') !important;
+}
+
+:where(.btn-theme, .btn-play) {
   color: #ffffff !important;
 }
 
-.btn-play {
-  background-color: v-bind('songsStore.settings.themeColor') !important;
-  color: #ffffff !important;
+.text-theme {
+  color: v-bind('songsStore.settings.themeColor') !important;
 }
+
 
 
 /* .btn-play:hover{
