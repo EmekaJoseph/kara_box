@@ -13,12 +13,9 @@
                 </ul>
 
             </div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-title="Tooltip Example">
-                Hover me
-            </button>
-            <!-- <div v-tooltip title="Total songs" class="float-end small">
+            <div v-tooltip title="Total songs" class="float-end small">
                 {{ songsStore.archive.length }}
-            </div> -->
+            </div>
         </div>
     </div>
 </template>
