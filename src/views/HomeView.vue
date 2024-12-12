@@ -11,7 +11,7 @@
 
       <div class="row min-vh-100 justify-content-center align-items-center">
         <div class="col-lg-8">
-          <div class="card border-0 shadow-sm" style="min-height: 450px;">
+          <div class="card border-0 shadow-s bg-light-subtle" style="min-height: 450px;">
             <div class="card-header border-0 fw-bold text-uppercase">
               {{ songsStore.settings.appTitle }}
               <div class="float-end text-muted small">
@@ -42,7 +42,7 @@
                 </li>
 
               </ul>
-              <div class="tab-content p-3">
+              <div class="tab-content pt-3">
                 <div class="tab-pane active" id="vault" role="tabpanel" aria-labelledby="vault-tab">
                   <VaultComponent />
                 </div>
@@ -99,6 +99,7 @@ async function loadSongsInFolder() {
   color: var(--bs-text-muted);
   border: none;
   padding-inline: 30px !important;
+  background: transparent !important;
 }
 
 .nav-link.active {
@@ -107,7 +108,7 @@ async function loadSongsInFolder() {
 }
 
 .tab-pane {
-  min-height: 250px;
+  min-height: 100px;
 }
 
 
@@ -137,7 +138,6 @@ async function loadSongsInFolder() {
   z-index: 2;
   /* Ensures content stays above the tint */
 }
-
 
 .copy-right {
   color: #ffffff;

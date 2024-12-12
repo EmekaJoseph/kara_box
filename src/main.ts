@@ -3,7 +3,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.min.js'
 //@ts-ignore
-// import tooltipDirective from './bsTooltipDirective.js';
+// import tooltipDirective from './bsTooltipDirective.ts';
 
 //bootstrap-icons
 import 'bootstrap-icons/font/bootstrap-icons.css'

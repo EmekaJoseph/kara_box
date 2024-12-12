@@ -49,8 +49,7 @@
                 </div>
 
                 <div class="col-11 mt-5">
-                    <div v-if="songsStore.hasIssueFindingFolder" class="alert alert-danger fade show border-0 py-1"
-                        role="alert">
+                    <div v-if="songsStore.hasIssueFindingFolder" class="text-danger">
                         <i class="bi bi-exclamation-circle-fill"></i> Cannot find folder: <span class="fw-bold">{{
                             songsStore.settings.folderName }}</span>
                     </div>

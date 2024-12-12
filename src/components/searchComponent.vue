@@ -1,8 +1,7 @@
 <template>
     <div class="row g-3">
         <div class="col-12">
-            <input v-model="searchQuery" class="form-control form-control-lg bg-light" placeholder="search here.."
-                type="text">
+            <input v-model="searchQuery" class="form-control form-control-lg" placeholder="search here.." type="text">
         </div>
         <div class="col-12">
             <div class="card content-bg p-2" style="height: 300px;; overflow-y: auto;">
@@ -14,9 +13,12 @@
                 </ul>
 
             </div>
-            <div class="float-end small">
+            <button type="button" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-title="Tooltip Example">
+                Hover me
+            </button>
+            <!-- <div v-tooltip title="Total songs" class="float-end small">
                 {{ songsStore.archive.length }}
-            </div>
+            </div> -->
         </div>
     </div>
 </template>
