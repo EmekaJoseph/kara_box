@@ -49,6 +49,7 @@
         }
       ]
     },
+    "artifactName": "${productName}-${version}.${ext}",
     "linux": {
       "target": "AppImage"
     },

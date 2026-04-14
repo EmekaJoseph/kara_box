@@ -1,2 +1,41 @@
-GENERATE FILE NAMES:
-dir /b > filelist.txt
+Electron integration notes
+
+1) Required packages
+- electron (dev dependency)
+- electron-builder (dev dependency)
+- cross-env (dev dependency)
+- npm-run-all2 (dev dependency, already used for parallel scripts)
+
+Example install commands:
+- npm install --save-dev electron electron-builder cross-env npm-run-all2
+
+2) Package.json setup
+- set "main": "electron/main.js"
+- keep "type": "module" if using ES modules in Electron files
+- add build config for electron-builder, e.g.:
+  - appId
+  - productName
+  - directories.output
+  - files
+  - win/mac/linux target settings
+  - nsis options for Windows installer
+  - artifactName if you want a custom installer filename
+
+Current relevant scripts in this project:
+- "dev": start Vite dev server
+- "electron:dev": run Electron in development mode with Vite at localhost:8185
+- "electron:build": build the Vue app and then package it with electron-builder
+
+3) Electron file structure
+- electron/main.js: Electron app entry point, creates BrowserWindow and loads Vite dev server in development or dist/index.html in production
+- electron/preload.js: preload script used by BrowserWindow for secure IPC and bridge logic
+
+4) Build workflow
+- npm run dev -> only Vite for frontend development
+- npm run electron:dev -> Electron app running with the Vite frontend
+- npm run electron:build -> production build of Vite + Electron packaging into installer/app
+
+5) Notes for this repo
+- The project already includes Electron entry files and electron-builder config in package.json.
+- The generated installer name currently comes from "productName" and "version".
+- Update package.json version from "0.0.0" to a real release version before packaging to avoid installer names like "KaraokeBox Setup 0.0.0.exe".
