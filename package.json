@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:start": "cross-env NODE_ENV=development electron .",
+    "electron:dev": "run-p dev electron:start",
     "electron:build": "cross-env NODE_ENV=production vite build && cross-env NODE_ENV=production electron-builder"
   },
   "build": {
