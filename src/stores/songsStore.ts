@@ -13,7 +13,7 @@ export const userSongsStore = defineStore('songsStore', () => {
     togglePanel: false,
     folderName: useStorage('karaoke_box-var_folder', 'karaoke_box'),
     appTitle: useStorage('karaoke_box-var_title', 'proffictech'),
-    themeColor: useStorage('karaoke_box-var_theme', '#48214A')
+    themeColor: useStorage('karaoke_box-var_theme', '#ff2e88')
   })
 
   const archive = ref<string[]>([])

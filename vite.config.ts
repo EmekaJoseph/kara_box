@@ -6,16 +6,16 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   base: './',
   plugins: [
     vue(),
     vueJsx(),
-    vueDevTools(),
+    ...(command === 'serve' ? [vueDevTools()] : []),
   ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-})
+}))

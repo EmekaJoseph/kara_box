@@ -1,7 +1,17 @@
-
-
-
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+
+:root {
+  --surface: #1c1224;
+  --surface-strong: #271733;
+  --surface-border: #3a2b46;
+  --text-primary: #f5f3f7;
+  --text-muted: rgba(245, 243, 247, 0.64);
+  --text-faint: rgba(245, 243, 247, 0.4);
+  --radius-lg: 1.1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+  --shadow-elevated: 0 24px 70px -24px rgba(0, 0, 0, 0.8);
+}
 
 input:focus,
 select:focus,
@@ -10,9 +20,7 @@ button:focus,
 .page-link:focus {
   outline: none !important;
   box-shadow: none !important;
-  border-color: #3685d3 !important;
 }
-
 
 *,
 *::before,
@@ -23,9 +31,16 @@ button:focus,
   outline: none;
 }
 
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
-  min-height: 100vh;
-  background: var(--vt-c-white);
+  background: #120a16;
+  color: var(--text-primary);
   transition: color 0.5s, background-color 0.5s;
   line-height: 1.6;
   font-family: 'Manrope', 'Open Sans', sans-serif;
@@ -35,29 +50,28 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #ffffff;
+  background-color: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #cccccc;
+  background-color: rgba(255, 255, 255, 0.18);
   border-radius: 5px;
 }
 
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
 
-
-
-
-
-
-.cursor-pointer{
+.cursor-pointer {
   cursor: pointer;
 }
 
-.content-bg{
-  background-color: #d9e3ac4a;
+.content-bg {
+  background-color: var(--surface);
   min-height: 300px;
 }
