@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-// const path = require('path');
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url';
 import { readdirSync } from 'fs';
@@ -32,6 +31,9 @@ function createWindow() {
 
 // Handle folder reading via IPC
 ipcMain.handle('read-folder', async (event, folderPath) => {
+    if (typeof folderPath !== 'string' || folderPath.trim() === '') {
+        throw new Error('Invalid folder path');
+    }
     try {
         const files = readdirSync(folderPath); // Synchronous read
         return files; // Return the list of files to the renderer
