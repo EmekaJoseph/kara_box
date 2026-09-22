@@ -3,7 +3,7 @@
   "author": "proffictech",
   "description": "A karaoke app that works like a game.",
   "main": "electron/main.js",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
