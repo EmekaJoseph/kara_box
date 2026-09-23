@@ -54,8 +54,8 @@
                             <i class="bi bi-exclamation-triangle-fill"></i>
                             <p>Couldn't play this video.</p>
                         </div>
-                        <video v-else-if="songsStore.isPlayingSong" class="w-100 h-100" controls autoplay
-                            :src="videoSrc" @error="handleVideoError">
+                        <video v-else-if="songsStore.isPlayingSong" ref="inlineVideoEl" class="w-100 h-100" controls
+                            autoplay :src="videoSrc" @error="handleVideoError" @loadedmetadata="applyPendingVolume">
                             Your browser does not support the video tag.
                         </video>
                     </div>
@@ -74,11 +74,13 @@
 
 <script setup lang="ts">
 import { userSongsStore } from '@/stores/songsStore';
+import log from '@/log';
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 
 const modalOpen = ref<any>(null)
 const modalClose = ref<any>(null)
+const inlineVideoEl = ref<HTMLVideoElement | null>(null)
 const songsStore = userSongsStore()
 
 const fileBrowserBtn = ref<any>(null)
@@ -89,6 +91,7 @@ const conversionFailed = ref(false)
 // 0 = original file not yet tried converting, 1 = tried the fast
 // stream-copy conversion, 2 = tried forcing a full re-encode.
 const conversionAttempts = ref(0)
+const pendingVolume = ref(1)
 
 const isProjectorActive = ref(false)
 const remoteState = reactive({ currentTime: 0, duration: 0, paused: true, ended: false, error: false })
@@ -104,7 +107,7 @@ onMounted(async () => {
         //@ts-ignore
         isProjectorActive.value = await window.electronAPI.getProjectorStatus()
     } catch (error) {
-        console.error('Failed to get projector status:', error)
+        log.error('Failed to get projector status:', error)
     }
     //@ts-ignore
     unsubscribeProjectorStatus = window.electronAPI.onProjectorStatus((active: boolean) => {
@@ -152,15 +155,38 @@ function toggleRemotePlayback() {
     window.electronAPI.sendProjectorCommand({ type: remoteState.paused ? 'play' : 'pause' })
 }
 
-function loadOnProjector(song: string) {
+function applyPendingVolume() {
+    if (inlineVideoEl.value) {
+        inlineVideoEl.value.volume = pendingVolume.value
+    }
+}
+
+async function fetchVolumeLevel(song: string): Promise<number> {
+    try {
+        //@ts-ignore
+        return await window.electronAPI.getVolumeLevel(song)
+    } catch (error) {
+        log.error('Failed to get volume level:', error)
+        return 1
+    }
+}
+
+async function loadOnProjector(song: string) {
     remoteState.error = false
+    const initialVolume = await fetchVolumeLevel(song)
+    volume.value = initialVolume
     //@ts-ignore
     window.electronAPI.sendProjectorCommand({
         type: 'load',
-        songsDir: songsStore.songsDir,
         song,
         title: songsStore.songName(song),
+        volume: initialVolume,
     })
+}
+
+async function loadInline(song: string) {
+    pendingVolume.value = await fetchVolumeLevel(song)
+    videoSrc.value = songsStore.toFileUrl(song)
 }
 
 function closeModal() {
@@ -187,11 +213,11 @@ async function handleVideoError() {
     isConverting.value = true
     try {
         //@ts-ignore
-        const convertedFileName = await window.electronAPI.convertVideo(songsStore.songsDir, songsStore.selectedSong, forceReencode)
-        videoSrc.value = songsStore.songsDir + '.converted/' + convertedFileName
+        const convertedPath = await window.electronAPI.convertVideo(songsStore.selectedSong, forceReencode)
+        videoSrc.value = songsStore.toFileUrl(convertedPath)
     } catch (error) {
         conversionFailed.value = true
-        console.error('Video conversion failed:', error)
+        log.error('Video conversion failed:', error)
     } finally {
         isConverting.value = false
     }
@@ -208,7 +234,7 @@ watch(() => songsStore.selectedSong, (song) => {
     if (isProjectorActive.value) {
         loadOnProjector(song)
     } else {
-        videoSrc.value = songsStore.songsDir + song
+        loadInline(song)
     }
 })
 
@@ -220,7 +246,7 @@ watch(isProjectorActive, (active) => {
     if (active) {
         loadOnProjector(songsStore.selectedSong)
     } else {
-        videoSrc.value = songsStore.songsDir + songsStore.selectedSong
+        loadInline(songsStore.selectedSong)
     }
 })
 

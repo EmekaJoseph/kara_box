@@ -1,13 +1,25 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, dialog, shell } from 'electron';
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url';
-import { readdirSync, existsSync, mkdirSync, unlinkSync, readFileSync } from 'fs';
+import { readdirSync, existsSync, mkdirSync, unlinkSync, readFileSync, writeFileSync } from 'fs';
+import { watch as fsWatch } from 'fs';
 import { spawn } from 'child_process';
 import { createServer } from 'http';
 import { networkInterfaces } from 'os';
 import { randomUUID } from 'crypto';
 import ffmpegPathRaw from 'ffmpeg-static';
 import QRCode from 'qrcode';
+import log from 'electron-log/main.js';
+
+// Guarded: a failure here must never take down the rest of this file, since
+// every ipcMain handler below depends on this module finishing evaluation.
+try {
+    log.initialize();
+} catch (err) {
+    console.error('electron-log failed to initialize:', err);
+}
+process.on('uncaughtException', (err) => log.error('Uncaught exception:', err));
+process.on('unhandledRejection', (reason) => log.error('Unhandled rejection:', reason));
 
 const ffmpegPath = ffmpegPathRaw.replace('app.asar', 'app.asar.unpacked');
 
@@ -15,16 +27,73 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.avi', '.webm', '.mov', '.m4v', '.wmv', '.flv', '.ogv']);
 const CONVERTED_DIR_NAME = '.converted';
+const VOLUME_CACHE_FILE = '.volume-cache.json';
+const TARGET_LUFS = -16;
+const WATCH_DEBOUNCE_MS = 500;
 
 let mainWindow;
 let projectorWindow = null;
-let currentSongsFolder = null;
+let currentSongsFolders = [];
 let guestServer = null;
 let guestServerPort = null;
 const requestQueue = [];
+const folderWatchers = new Map(); // folderPath -> { watcher, debounceTimer }
 
 function listVideoFiles(folderPath) {
     return readdirSync(folderPath).filter((file) => VIDEO_EXTENSIONS.has(path.extname(file).toLowerCase()));
+}
+
+// Scans every configured folder and returns the merged list of full,
+// absolute file paths (the canonical song identifier used everywhere:
+// playback, the queue, the guest API, conversion/volume caches).
+function scanAllFolders(folderPaths) {
+    const songs = [];
+    const failedFolders = [];
+    for (const folderPath of folderPaths) {
+        try {
+            for (const file of listVideoFiles(folderPath)) {
+                songs.push(path.join(folderPath, file));
+            }
+        } catch (err) {
+            failedFolders.push(folderPath);
+            log.error(`Error reading folder ${folderPath}:`, err);
+        }
+    }
+    return { songs, failedFolders };
+}
+
+function broadcastSongs() {
+    if (!mainWindow) return;
+    const { songs, failedFolders } = scanAllFolders(currentSongsFolders);
+    mainWindow.webContents.send('songs-updated', { songs, failedFolders });
+}
+
+// Keeps a live fs.watch on every configured library folder so adding or
+// removing files shows up without needing to reopen Settings. Watch events
+// fire multiple times for a single file operation, so each folder's
+// callback is debounced before triggering a re-scan.
+function syncFolderWatchers(folderPaths) {
+    for (const [folderPath, entry] of folderWatchers) {
+        if (!folderPaths.includes(folderPath)) {
+            clearTimeout(entry.debounceTimer);
+            entry.watcher.close();
+            folderWatchers.delete(folderPath);
+        }
+    }
+
+    for (const folderPath of folderPaths) {
+        if (folderWatchers.has(folderPath)) continue;
+        try {
+            const entry = { watcher: null, debounceTimer: null };
+            entry.watcher = fsWatch(folderPath, { persistent: true }, () => {
+                clearTimeout(entry.debounceTimer);
+                entry.debounceTimer = setTimeout(broadcastSongs, WATCH_DEBOUNCE_MS);
+            });
+            folderWatchers.set(folderPath, entry);
+        } catch (err) {
+            log.error(`Could not watch folder ${folderPath}:`, err);
+        }
+    }
 }
 
 function createWindow() {
@@ -47,7 +116,7 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
     }
 
-    console.log('Vue app path:', path.join(__dirname, '../dist/index.html'));
+    log.info('Vue app path:', path.join(__dirname, '../dist/index.html'));
 }
 
 function loadRoute(win, hash) {
@@ -118,19 +187,29 @@ function syncProjectorWindow() {
     }
 }
 
+// Scans the given folders, starts watching them for live changes, and
+// returns the merged song list (full absolute paths) plus any folders that
+// couldn't be read.
+ipcMain.handle('read-folders', async (event, folderPaths) => {
+    if (!Array.isArray(folderPaths)) {
+        throw new Error('Invalid folder list');
+    }
+    currentSongsFolders = folderPaths.filter((f) => typeof f === 'string' && f.trim());
+    syncFolderWatchers(currentSongsFolders);
+    return scanAllFolders(currentSongsFolders);
+});
 
-// Handle folder reading via IPC
-ipcMain.handle('read-folder', async (event, folderPath) => {
-    if (typeof folderPath !== 'string' || folderPath.trim() === '') {
-        throw new Error('Invalid folder path');
-    }
-    try {
-        currentSongsFolder = folderPath;
-        return listVideoFiles(folderPath);
-    } catch (err) {
-        console.error('Error reading folder:', err);
-        throw err; // Throw the error to be handled in the renderer
-    }
+ipcMain.handle('pick-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory'],
+    });
+    if (result.canceled || !result.filePaths.length) return null;
+    return result.filePaths[0];
+});
+
+ipcMain.handle('open-log-folder', () => {
+    const logFile = log.transports.file.getFile().path;
+    shell.showItemInFolder(logFile);
 });
 
 
@@ -188,7 +267,7 @@ function readRequestBody(req) {
 }
 
 // Local HTTP server guests on the same network can reach via QR code, to
-// browse the current song folder and add requests to a shared queue.
+// browse the current song library and add requests to a shared queue.
 function ensureGuestServer() {
     if (guestServer) return;
 
@@ -204,8 +283,7 @@ function ensureGuestServer() {
             }
 
             if (req.method === 'GET' && url.pathname === '/api/songs') {
-                if (!currentSongsFolder) return sendJson(res, 200, []);
-                return sendJson(res, 200, listVideoFiles(currentSongsFolder));
+                return sendJson(res, 200, scanAllFolders(currentSongsFolders).songs);
             }
 
             if (req.method === 'POST' && url.pathname === '/api/queue') {
@@ -213,10 +291,10 @@ function ensureGuestServer() {
                 const song = typeof body.song === 'string' ? body.song : '';
                 const name = typeof body.name === 'string' ? body.name.trim().slice(0, 30) : '';
 
-                // Whitelist: the requested song must be a real file in the
-                // current folder, since this endpoint is reachable by any
-                // device on the network.
-                const validSongs = currentSongsFolder ? listVideoFiles(currentSongsFolder) : [];
+                // Whitelist: the requested song must be a real file in one of
+                // the current folders, since this endpoint is reachable by
+                // any device on the network.
+                const validSongs = scanAllFolders(currentSongsFolders).songs;
                 if (!validSongs.includes(song)) {
                     return sendJson(res, 400, { error: 'Unknown song' });
                 }
@@ -234,7 +312,7 @@ function ensureGuestServer() {
             res.writeHead(404);
             res.end();
         } catch (err) {
-            console.error('Guest server error:', err);
+            log.error('Guest server error:', err);
             sendJson(res, 500, { error: 'Server error' });
         }
     });
@@ -319,18 +397,19 @@ function removeIfExists(filePath) {
 // still failed to play, meaning the copied video codec itself (not just the
 // container/audio) is the real problem, since ffmpeg's exit code alone
 // can't tell us whether the copied codec is actually browser-decodable.
-ipcMain.handle('convert-video', async (event, folderPath, fileName, forceReencode) => {
-    if (typeof folderPath !== 'string' || typeof fileName !== 'string' || !folderPath.trim() || !fileName.trim()) {
+ipcMain.handle('convert-video', async (event, fullPath, forceReencode) => {
+    if (typeof fullPath !== 'string' || !fullPath.trim()) {
         throw new Error('Invalid arguments');
     }
 
-    const inputPath = path.join(folderPath, fileName);
+    const folderPath = path.dirname(fullPath);
+    const fileName = path.basename(fullPath);
     const cacheDir = path.join(folderPath, CONVERTED_DIR_NAME);
     const outputName = `${path.basename(fileName, path.extname(fileName))}.mp4`;
     const outputPath = path.join(cacheDir, outputName);
 
     if (!forceReencode && existsSync(outputPath)) {
-        return outputName;
+        return outputPath;
     }
 
     if (!existsSync(cacheDir)) {
@@ -338,7 +417,7 @@ ipcMain.handle('convert-video', async (event, folderPath, fileName, forceReencod
     }
 
     const reencode = () => runFfmpeg([
-        '-y', '-i', inputPath,
+        '-y', '-i', fullPath,
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
         '-c:a', 'aac', '-movflags', '+faststart',
         outputPath,
@@ -349,16 +428,17 @@ ipcMain.handle('convert-video', async (event, folderPath, fileName, forceReencod
             await reencode();
         } catch (err) {
             removeIfExists(outputPath);
+            log.error(`Video re-encode failed for ${fullPath}:`, err);
             throw err;
         }
-        return outputName;
+        return outputPath;
     }
 
     try {
         // Fast path: repackage into MP4 without re-encoding video. Fixes the
         // common case (e.g. an MKV with AC3/DTS audio) where the video
         // stream is already playable and only the container/audio isn't.
-        await runFfmpeg(['-y', '-i', inputPath, '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', outputPath]);
+        await runFfmpeg(['-y', '-i', fullPath, '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', outputPath]);
     } catch {
         removeIfExists(outputPath);
         // Slow path: the video codec itself is unsupported, so re-encode it.
@@ -366,11 +446,83 @@ ipcMain.handle('convert-video', async (event, folderPath, fileName, forceReencod
             await reencode();
         } catch (err) {
             removeIfExists(outputPath);
+            log.error(`Video conversion failed for ${fullPath}:`, err);
             throw err;
         }
     }
 
-    return outputName;
+    return outputPath;
+});
+
+function readJsonSafe(filePath) {
+    try {
+        return JSON.parse(readFileSync(filePath, 'utf-8'));
+    } catch {
+        return {};
+    }
+}
+
+// Runs ffmpeg's EBU R128 loudness filter in measure-only mode (output
+// discarded via -f null) and parses the integrated loudness (LUFS) it
+// reports. This only analyzes the file; it doesn't alter it.
+function measureLoudness(inputPath) {
+    return new Promise((resolve, reject) => {
+        const proc = spawn(ffmpegPath, ['-i', inputPath, '-af', 'loudnorm=print_format=json', '-f', 'null', '-']);
+        let stderr = '';
+        proc.stderr.on('data', (chunk) => { stderr += chunk; });
+        proc.on('error', reject);
+        proc.on('close', () => {
+            const start = stderr.lastIndexOf('{');
+            const end = stderr.lastIndexOf('}');
+            if (start === -1 || end === -1 || end < start) {
+                reject(new Error('Could not parse loudness measurement'));
+                return;
+            }
+            try {
+                const parsed = JSON.parse(stderr.slice(start, end + 1));
+                resolve(parseFloat(parsed.input_i));
+            } catch (err) {
+                reject(err);
+            }
+        });
+    });
+}
+
+// Computes (and caches) a per-song starting volume so a quiet dialogue-heavy
+// track and a loud, hot-mastered one don't blast the room back to back.
+// Deliberately attenuate-only: a plain <video> element's volume tops out at
+// 1.0 (unity gain), so a quiet file simply keeps its natural level rather
+// than needing amplification we can't apply safely here.
+ipcMain.handle('get-volume-level', async (event, fullPath) => {
+    if (typeof fullPath !== 'string' || !fullPath.trim()) return 1;
+
+    const folderPath = path.dirname(fullPath);
+    const fileName = path.basename(fullPath);
+    const cachePath = path.join(folderPath, VOLUME_CACHE_FILE);
+    const cache = readJsonSafe(cachePath);
+
+    if (typeof cache[fileName] === 'number') {
+        return cache[fileName];
+    }
+
+    let ratio = 1;
+    try {
+        const measuredLufs = await measureLoudness(fullPath);
+        const gainDb = TARGET_LUFS - measuredLufs;
+        ratio = Math.min(1, Math.max(0.15, 10 ** (gainDb / 20)));
+    } catch (err) {
+        log.error(`Volume measurement failed for ${fullPath}:`, err);
+        ratio = 1;
+    }
+
+    cache[fileName] = ratio;
+    try {
+        writeFileSync(cachePath, JSON.stringify(cache, null, 2));
+    } catch (err) {
+        log.error('Failed to write volume cache:', err);
+    }
+
+    return ratio;
 });
 
 
@@ -386,6 +538,10 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
     if (guestServer) guestServer.close();
     if (projectorWindow) projectorWindow.close();
+    for (const entry of folderWatchers.values()) {
+        clearTimeout(entry.debounceTimer);
+        entry.watcher.close();
+    }
     if (process.platform !== 'darwin') {
         app.quit();
     }

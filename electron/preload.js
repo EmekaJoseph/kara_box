@@ -1,3 +1,10 @@
+// Never let logging setup take the rest of the preload script down with it.
+try {
+    require('electron-log/preload.js');
+} catch (err) {
+    console.error('electron-log preload failed to initialize:', err);
+}
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -13,10 +20,18 @@ window.addEventListener('DOMContentLoaded', () => {
 })
 
 
-// Expose the readFolder/convertVideo/guest-queue functions
+// Expose the readFolders/convertVideo/guest-queue/projector/logging functions
 contextBridge.exposeInMainWorld('electronAPI', {
-    readFolder: (folderPath) => ipcRenderer.invoke('read-folder', folderPath),
-    convertVideo: (folderPath, fileName, forceReencode) => ipcRenderer.invoke('convert-video', folderPath, fileName, forceReencode),
+    readFolders: (folderPaths) => ipcRenderer.invoke('read-folders', folderPaths),
+    onSongsUpdated: (callback) => {
+        const listener = (event, payload) => callback(payload);
+        ipcRenderer.on('songs-updated', listener);
+        return () => ipcRenderer.removeListener('songs-updated', listener);
+    },
+    pickFolder: () => ipcRenderer.invoke('pick-folder'),
+    openLogFolder: () => ipcRenderer.invoke('open-log-folder'),
+    convertVideo: (fullPath, forceReencode) => ipcRenderer.invoke('convert-video', fullPath, forceReencode),
+    getVolumeLevel: (fullPath) => ipcRenderer.invoke('get-volume-level', fullPath),
     getGuestUrl: () => ipcRenderer.invoke('get-guest-url'),
     getGuestQrCode: (url) => ipcRenderer.invoke('get-guest-qrcode', url),
     queueGet: () => ipcRenderer.invoke('queue-get'),

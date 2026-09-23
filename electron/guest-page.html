@@ -149,8 +149,9 @@
     <script>
         let allSongs = [];
 
-        function songLabel(fileName) {
-            return fileName.replace(/\.[^/.]+$/, '');
+        function songLabel(fullPath) {
+            const base = fullPath.split(/[\\/]/).pop() || fullPath;
+            return base.replace(/\.[^/.]+$/, '');
         }
 
         function render() {

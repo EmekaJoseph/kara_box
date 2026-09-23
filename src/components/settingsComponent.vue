@@ -25,15 +25,27 @@
                     </div>
 
                     <div class="field-group">
-                        <label for="folder_name">Folder</label>
-                        <input v-model="form.folder_name" type="text" class="field-input" id="folder_name" />
-                        <div v-if="!isValidFoldername" class="field-hint text-danger">
-                            Must be only one word, no spaces. Only letters, numbers, underscores are allowed. It must
-                            not start with a number and may end with an underscore.
+                        <label>Song folders</label>
+                        <ul v-if="songsStore.settings.folders.length" class="folder-list">
+                            <li v-for="folder in songsStore.settings.folders" :key="folder" class="folder-item">
+                                <span class="folder-item-name" :title="folder">
+                                    <i class="bi bi-folder-fill"></i> {{ folderBaseName(folder) }}
+                                </span>
+                                <button type="button" class="folder-remove" @click="removeFolder(folder)"
+                                    v-tooltip title="Remove folder">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </li>
+                        </ul>
+                        <button type="button" class="btn-add-folder" @click="addFolder">
+                            <i class="bi bi-folder-plus"></i> Add folder
+                        </button>
+                        <div v-if="addFolderError" class="field-hint text-danger">
+                            <i class="bi bi-exclamation-circle-fill"></i> {{ addFolderError }}
                         </div>
                         <div v-if="songsStore.hasIssueFindingFolder" class="field-hint text-danger">
-                            <i class="bi bi-exclamation-circle-fill"></i> Cannot find folder: <span
-                                class="fw-bold">{{ songsStore.settings.folderName }}</span>
+                            <i class="bi bi-exclamation-circle-fill"></i> Couldn't read: <span class="fw-bold">{{
+                                failedFolderNames }}</span>
                         </div>
                     </div>
                 </div>
@@ -72,8 +84,18 @@
                                 which blocks phone-to-laptop connections entirely and can't be fixed from here.
                             </p>
                         </div>
-                        <div v-else class="guest-status">Connect to Wi-Fi to enable guest requests</div>
+                        <div v-else class="guest-status">
+                            Connect to Wi-Fi to enable guest requests
+                            <span v-if="guestError" class="d-block text-danger mt-1">{{ guestError }}</span>
+                        </div>
                     </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-label">Advanced</span>
+                    <button type="button" class="btn-secondary" @click="openLogFolder">
+                        <i class="bi bi-file-earmark-text"></i> Open error log
+                    </button>
                 </div>
 
             </form>
@@ -103,24 +125,61 @@
 <script setup lang="ts">
 import { userSongsStore } from '@/stores/songsStore';
 import { computed, reactive, ref, watch } from 'vue';
+import log from '@/log';
 
 import { ColorPicker } from "vue3-colorpicker";
 import "vue3-colorpicker/style.css";
 
 const form = reactive({
     theme_color: '',
-    folder_name: '',
     app_title: '',
 })
 
 const showAlert = ref(false);
 
-const isValidFoldername = computed(() => {
-    const regex = /^[a-zA-Z_][a-zA-Z0-9_]*_?$/;
-    return regex.test(form.folder_name)
-})
-
 const songsStore = userSongsStore()
+
+const failedFolderNames = computed(() =>
+    songsStore.failedFolders.map((f) => folderBaseName(f)).join(', ')
+)
+
+function folderBaseName(folder: string): string {
+    return folder.split(/[\\/]/).pop() || folder
+}
+
+const addFolderError = ref('')
+
+async function addFolder() {
+    addFolderError.value = ''
+    try {
+        //@ts-ignore
+        if (!window.electronAPI?.pickFolder) {
+            addFolderError.value = 'electronAPI.pickFolder is unavailable (preload bridge not loaded)'
+            return
+        }
+        //@ts-ignore
+        const folder = await window.electronAPI.pickFolder()
+        if (folder && !songsStore.settings.folders.includes(folder)) {
+            songsStore.settings.folders.push(folder)
+        }
+    } catch (error: any) {
+        addFolderError.value = error?.message || String(error)
+        log.error('Failed to open folder picker:', error)
+    }
+}
+
+function removeFolder(folder: string) {
+    songsStore.settings.folders = songsStore.settings.folders.filter((f) => f !== folder)
+}
+
+async function openLogFolder() {
+    try {
+        //@ts-ignore
+        await window.electronAPI.openLogFolder()
+    } catch (error) {
+        log.error('Failed to open log folder:', error)
+    }
+}
 
 const settingsComponentOpen = ref<any>(null)
 
@@ -129,26 +188,36 @@ const guestQrCode = ref('')
 const guestLoading = ref(false)
 const showQrOverlay = ref(false)
 
+const guestError = ref('')
+
 async function loadGuestAccess() {
     if (guestUrl.value || guestLoading.value) return
     guestLoading.value = true
+    guestError.value = ''
     try {
+        //@ts-ignore
+        if (!window.electronAPI?.getGuestUrl) {
+            guestError.value = 'electronAPI.getGuestUrl is unavailable (preload bridge not loaded)'
+            return
+        }
         //@ts-ignore
         const url = await window.electronAPI.getGuestUrl()
         if (url) {
             guestUrl.value = url
             //@ts-ignore
             guestQrCode.value = await window.electronAPI.getGuestQrCode(url)
+        } else {
+            guestError.value = 'No network address found (not connected to Wi-Fi/LAN?)'
         }
-    } catch (error) {
-        console.error('Failed to load guest access:', error)
+    } catch (error: any) {
+        guestError.value = error?.message || String(error)
+        log.error('Failed to load guest access:', error)
     } finally {
         guestLoading.value = false
     }
 }
 
 watch(() => songsStore.settings.togglePanel, () => {
-    form.folder_name = songsStore.settings.folderName
     form.app_title = songsStore.settings.appTitle
     form.theme_color = songsStore.settings.themeColor
     showAlert.value = false;
@@ -157,18 +226,9 @@ watch(() => songsStore.settings.togglePanel, () => {
 })
 
 watch(() => form, () => {
-    songsStore.settings.folderName = form.folder_name
     songsStore.settings.appTitle = form.app_title
     songsStore.settings.themeColor = form.theme_color
-    // handleAlert()
 }, { deep: true })
-
-// function saveSettings() {
-//     songsStore.settings.folderName = form.folder_name
-//     songsStore.settings.appTitle = form.app_title
-//     songsStore.settings.themeColor = form.theme_color
-
-// }
 
 
 function handleAlert() {
@@ -262,6 +322,74 @@ function handleAlert() {
 
 .field-hint {
     font-size: 0.75rem;
+}
+
+.folder-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: var(--radius-sm);
+    background: #000000;
+    border: 1px solid var(--surface-border);
+}
+
+.folder-item-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.folder-remove {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-remove:hover {
+    background: var(--surface-strong);
+    color: var(--text-primary);
+}
+
+.btn-add-folder,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.55rem 0.9rem;
+}
+
+.btn-add-folder:hover,
+.btn-secondary:hover {
+    background: var(--surface-strong);
 }
 
 .theme-row {

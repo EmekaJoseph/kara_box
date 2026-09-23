@@ -45,9 +45,13 @@
           </div>
         </div>
 
-        <div v-if="songsStore.hasIssueFindingFolder" class="app-card-alert">
+        <div v-if="songsStore.settings.folders.length === 0" class="app-card-alert app-card-hint">
+          <i class="bi bi-folder-plus"></i>
+          Add a song folder in <span class="fw-semibold">Settings</span> to get started
+        </div>
+        <div v-else-if="songsStore.hasIssueFindingFolder" class="app-card-alert">
           <i class="bi bi-exclamation-triangle-fill"></i>
-          Can't find folder <span class="fw-semibold">{{ songsStore.settings.folderName }}</span>
+          Couldn't read: <span class="fw-semibold">{{ failedFolderNames }}</span>
         </div>
       </div>
 
@@ -68,25 +72,49 @@ import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
 import QueueComponent from '@/components/queueComponent.vue';
 import { userSongsStore } from '@/stores/songsStore';
-import { ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import SettingsComponent from '@/components/settingsComponent.vue';
+import log from '@/log';
 
 const songsStore = userSongsStore()
 
-watchEffect(() => {
-  loadSongsInFolder()
-})
+let unsubscribeSongsUpdated: (() => void) | null = null
 
-async function loadSongsInFolder() {
+function applySongsPayload(payload: { songs: string[]; failedFolders: string[] }) {
+  songsStore.archive = payload.songs
+  songsStore.failedFolders = payload.failedFolders
+  songsStore.hasIssueFindingFolder = payload.failedFolders.length > 0
+}
+
+async function loadSongsInFolders() {
   try {
     //@ts-ignore
-    const songs = await window.electronAPI.readFolder(songsStore.songsDir);
-    songsStore.archive = songs
-    songsStore.hasIssueFindingFolder = false
+    // Spread into a plain array: a Vue-reactive array can fail to survive
+    // Electron's structured-clone IPC serialization as a genuine Array.
+    const payload = await window.electronAPI.readFolders([...songsStore.settings.folders])
+    applySongsPayload(payload)
   } catch (error) {
     songsStore.hasIssueFindingFolder = true
+    log.error('Failed to read song folders:', error)
   }
 }
+
+const failedFolderNames = computed(() =>
+  songsStore.failedFolders.map((f) => f.split(/[\\/]/).pop()).join(', ')
+)
+
+watch(() => songsStore.settings.folders, () => {
+  loadSongsInFolders()
+}, { deep: true, immediate: true })
+
+onMounted(() => {
+  //@ts-ignore
+  unsubscribeSongsUpdated = window.electronAPI.onSongsUpdated(applySongsPayload)
+})
+
+onUnmounted(() => {
+  unsubscribeSongsUpdated?.()
+})
 
 
 const thisYear = ref(new Date().getFullYear())
@@ -284,6 +312,12 @@ const thisYear = ref(new Date().getFullYear())
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.app-card-hint {
+  background: var(--surface);
+  border-top: 1px solid var(--surface-border);
+  color: var(--text-muted);
 }
 
 .brand-footer {

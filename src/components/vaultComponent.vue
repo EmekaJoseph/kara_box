@@ -15,7 +15,7 @@
 
         <div class="vault-actions">
             <button v-tooltip title="Spin to shuffle songs!" @click="getRandomSong" class="btn-spin"
-                :class="{ spinning: pageParams.isLoading }">
+                :disabled="songsStore.archive.length === 0" :class="{ spinning: pageParams.isLoading }">
                 <i class="bi bi-arrow-repeat"></i> Spin
             </button>
             <span v-tooltip title="Number of songs left" class="count-pill">
@@ -27,6 +27,10 @@
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
         </div>
+
+        <p v-if="songsStore.archive.length === 0" class="vault-error">
+            <i class="bi bi-exclamation-circle-fill"></i> No songs found
+        </p>
     </div>
 
     <Teleport to="body">
@@ -242,7 +246,7 @@ function confirmReset() {
     transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
 
-.btn-spin:hover {
+.btn-spin:hover:not(:disabled) {
     background: var(--theme-color-strong);
     box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.75),
         0 0 28px var(--theme-glow),
@@ -253,8 +257,24 @@ function confirmReset() {
     transform: scale(0.98);
 }
 
+.btn-spin:disabled {
+    opacity: 0.4;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
 .btn-spin.spinning i {
     animation: spin-icon 0.6s linear infinite;
+}
+
+.vault-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    color: #ff8a93;
+    font-size: 0.8rem;
+    text-align: center;
 }
 
 .btn-reset {

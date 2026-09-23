@@ -1,8 +1,8 @@
 <template>
     <div class="projector-stage">
         <video v-if="videoSrc" ref="videoEl" :src="videoSrc" autoplay class="projector-video" @error="handleVideoError"
-            @timeupdate="reportState()" @loadedmetadata="reportState()" @play="reportState()" @pause="reportState()"
-            @ended="reportState()"></video>
+            @timeupdate="reportState()" @loadedmetadata="onLoadedMetadata" @play="reportState()"
+            @pause="reportState()" @ended="reportState()"></video>
         <div v-else class="projector-idle">
             <span class="idle-eyebrow"><i class="bi bi-mic-fill"></i> Karaoke Box <span class="blink-dot"></span></span>
             <h1 class="idle-title">{{ songsStore.settings.appTitle }}</h1>
@@ -13,15 +13,16 @@
 
 <script setup lang="ts">
 import { userSongsStore } from '@/stores/songsStore';
+import log from '@/log';
 import { onMounted, onUnmounted, ref } from 'vue';
 
 const songsStore = userSongsStore();
 
 const videoEl = ref<HTMLVideoElement | null>(null);
 const videoSrc = ref('');
-const currentSongsDir = ref('');
 const currentSong = ref('');
 const conversionAttempts = ref(0);
+const pendingVolume = ref(1);
 
 let unsubscribeCommand: (() => void) | null = null;
 
@@ -37,10 +38,10 @@ onUnmounted(() => {
 function handleCommand(command: any) {
     switch (command.type) {
         case 'load':
-            currentSongsDir.value = command.songsDir;
             currentSong.value = command.song;
             conversionAttempts.value = 0;
-            videoSrc.value = command.songsDir + command.song;
+            pendingVolume.value = typeof command.volume === 'number' ? command.volume : 1;
+            videoSrc.value = songsStore.toFileUrl(command.song);
             break;
         case 'play':
             videoEl.value?.play();
@@ -61,6 +62,11 @@ function handleCommand(command: any) {
     }
 }
 
+function onLoadedMetadata() {
+    if (videoEl.value) videoEl.value.volume = pendingVolume.value;
+    reportState();
+}
+
 async function handleVideoError() {
     if (conversionAttempts.value >= 2 || !currentSong.value) {
         reportState(true);
@@ -71,10 +77,10 @@ async function handleVideoError() {
     conversionAttempts.value++;
     try {
         //@ts-ignore
-        const convertedFileName = await window.electronAPI.convertVideo(currentSongsDir.value, currentSong.value, forceReencode);
-        videoSrc.value = currentSongsDir.value + '.converted/' + convertedFileName;
+        const convertedPath = await window.electronAPI.convertVideo(currentSong.value, forceReencode);
+        videoSrc.value = songsStore.toFileUrl(convertedPath);
     } catch (error) {
-        console.error('Projector video conversion failed:', error);
+        log.error('Projector video conversion failed:', error);
         reportState(true);
     }
 }
