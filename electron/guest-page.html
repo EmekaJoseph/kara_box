@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <title>Request a Song</title>
+    <style>
+        :root {
+            --accent: #ff2e88;
+            --bg: #120a17;
+            --surface: #1c1224;
+            --border: #3a2b46;
+            --text: #f5f3f7;
+            --text-muted: rgba(245, 243, 247, 0.64);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 1.25rem 1rem calc(5rem + env(safe-area-inset-bottom));
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin: 0 0 0.25rem;
+            text-shadow: 0 0 16px rgba(255, 46, 136, 0.5);
+        }
+
+        .eyebrow {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+        }
+
+        input {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: #000;
+            color: var(--text);
+            border-radius: 0.6rem;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(255, 46, 136, 0.45);
+        }
+
+        .song-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .song-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.6rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        .song-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .add-btn {
+            flex-shrink: 0;
+            border: none;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.9rem;
+        }
+
+        .add-btn:disabled {
+            opacity: 0.5;
+        }
+
+        .empty,
+        .status {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding: 2rem 1rem;
+        }
+
+        .toast {
+            position: fixed;
+            left: 1rem;
+            right: 1rem;
+            bottom: 1.25rem;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.8rem 1rem;
+            border-radius: 0.6rem;
+            box-shadow: 0 10px 30px -8px rgba(255, 46, 136, 0.6);
+            transform: translateY(120%);
+            transition: transform 0.2s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="eyebrow">🎤 Karaoke Box</div>
+    <h1>Request a Song</h1>
+
+    <input id="nameInput" type="text" placeholder="Your name" maxlength="30" />
+    <input id="searchInput" type="text" placeholder="Search songs&hellip;" />
+
+    <div id="songList" class="song-list">
+        <div class="status">Loading songs&hellip;</div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let allSongs = [];
+
+        function songLabel(fileName) {
+            return fileName.replace(/\.[^/.]+$/, '');
+        }
+
+        function render() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const list = document.getElementById('songList');
+            const filtered = allSongs.filter((s) => songLabel(s).toLowerCase().includes(query));
+
+            if (!filtered.length) {
+                list.innerHTML = '';
+                const empty = document.createElement('div');
+                empty.className = 'empty';
+                empty.textContent = allSongs.length ? 'No songs match your search' : 'No songs found';
+                list.appendChild(empty);
+                return;
+            }
+
+            list.innerHTML = '';
+            for (const song of filtered) {
+                const item = document.createElement('div');
+                item.className = 'song-item';
+
+                const name = document.createElement('span');
+                name.className = 'song-name';
+                name.textContent = songLabel(song);
+
+                const btn = document.createElement('button');
+                btn.className = 'add-btn';
+                btn.type = 'button';
+                btn.textContent = 'Request';
+                btn.addEventListener('click', () => requestSong(song, btn));
+
+                item.appendChild(name);
+                item.appendChild(btn);
+                list.appendChild(item);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1800);
+        }
+
+        async function requestSong(song, btn) {
+            btn.disabled = true;
+            const name = document.getElementById('nameInput').value.trim();
+            try {
+                localStorage.setItem('karaoke_guest_name', name);
+                const res = await fetch('/api/queue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ song, name }),
+                });
+                if (!res.ok) throw new Error('Request failed');
+                showToast('Added to the queue!');
+            } catch (err) {
+                showToast("Couldn't add that song, try again");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function loadSongs() {
+            try {
+                const res = await fetch('/api/songs');
+                allSongs = await res.json();
+                render();
+            } catch (err) {
+                document.getElementById('songList').innerHTML = '<div class="empty">Couldn\'t load songs</div>';
+            }
+        }
+
+        document.getElementById('nameInput').value = localStorage.getItem('karaoke_guest_name') || '';
+        document.getElementById('searchInput').addEventListener('input', render);
+        loadSongs();
+    </script>
+</body>
+
+</html>

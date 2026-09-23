@@ -25,6 +25,11 @@
               role="tab" aria-controls="search" aria-selected="false">
               <i class="bi bi-search"></i> List
             </button>
+            <button class="segmented-item" id="queue-tab" data-bs-toggle="tab" data-bs-target="#queue" type="button"
+              role="tab" aria-controls="queue" aria-selected="false">
+              <i class="bi bi-qr-code"></i> Requests
+              <span v-if="songsStore.queue.length" class="tab-badge">{{ songsStore.queue.length }}</span>
+            </button>
           </div>
 
           <div class="tab-content pt-4">
@@ -33,6 +38,9 @@
             </div>
             <div class="tab-pane" id="search" role="tabpanel" aria-labelledby="search-tab">
               <SearchComponent />
+            </div>
+            <div class="tab-pane" id="queue" role="tabpanel" aria-labelledby="queue-tab">
+              <QueueComponent />
             </div>
           </div>
         </div>
@@ -58,6 +66,7 @@
 import playModal from '@/components/playModal.vue';
 import VaultComponent from '@/components/vaultComponent.vue';
 import SearchComponent from '@/components/searchComponent.vue';
+import QueueComponent from '@/components/queueComponent.vue';
 import { userSongsStore } from '@/stores/songsStore';
 import { ref, watchEffect } from 'vue';
 import SettingsComponent from '@/components/settingsComponent.vue';
@@ -235,13 +244,14 @@ const thisYear = ref(new Date().getFullYear())
   background: transparent;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.85rem;
-  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  padding: 0.6rem 0.5rem;
   border-radius: calc(var(--radius-md) - 0.3rem);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
+  white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -249,6 +259,20 @@ const thisYear = ref(new Date().getFullYear())
   background: var(--theme-color);
   color: #ffffff;
   box-shadow: 0 0 14px var(--theme-glow);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--theme-color-bright);
+  color: #1c0a12;
+  font-size: 0.65rem;
+  font-weight: 800;
 }
 
 .app-card-alert {

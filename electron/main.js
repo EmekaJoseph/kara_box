@@ -1,9 +1,13 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url';
-import { readdirSync, existsSync, mkdirSync, unlinkSync } from 'fs';
+import { readdirSync, existsSync, mkdirSync, unlinkSync, readFileSync } from 'fs';
 import { spawn } from 'child_process';
+import { createServer } from 'http';
+import { networkInterfaces } from 'os';
+import { randomUUID } from 'crypto';
 import ffmpegPathRaw from 'ffmpeg-static';
+import QRCode from 'qrcode';
 
 const ffmpegPath = ffmpegPathRaw.replace('app.asar', 'app.asar.unpacked');
 
@@ -13,6 +17,14 @@ const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.avi', '.webm', '.mov', '.m4v
 const CONVERTED_DIR_NAME = '.converted';
 
 let mainWindow;
+let currentSongsFolder = null;
+let guestServer = null;
+let guestServerPort = null;
+const requestQueue = [];
+
+function listVideoFiles(folderPath) {
+    return readdirSync(folderPath).filter((file) => VIDEO_EXTENSIONS.has(path.extname(file).toLowerCase()));
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -44,14 +56,156 @@ ipcMain.handle('read-folder', async (event, folderPath) => {
         throw new Error('Invalid folder path');
     }
     try {
-        const files = readdirSync(folderPath); // Synchronous read
-        return files.filter((file) => VIDEO_EXTENSIONS.has(path.extname(file).toLowerCase()));
+        currentSongsFolder = folderPath;
+        return listVideoFiles(folderPath);
     } catch (err) {
         console.error('Error reading folder:', err);
         throw err; // Throw the error to be handled in the renderer
     }
 });
 
+
+const VIRTUAL_ADAPTER_PATTERN = /virtual|vmware|virtualbox|hyper-v|vethernet|docker|wsl|tailscale|zerotier|loopback|tap|tun|vpn/i;
+
+// Picks the LAN-facing IPv4 address guests would actually use to reach this
+// machine, preferring a real Wi-Fi/Ethernet adapter over virtual ones (VPNs,
+// Docker, VMware/Hyper-V, etc. commonly sort before the real adapter and
+// aren't reachable from other devices on the network).
+function getLanAddress() {
+    const interfaces = networkInterfaces();
+    const candidates = [];
+
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                candidates.push({ name, address: iface.address });
+            }
+        }
+    }
+
+    const real = candidates.find((c) => !VIRTUAL_ADAPTER_PATTERN.test(c.name));
+    return (real || candidates[0])?.address || null;
+}
+
+function broadcastQueue() {
+    if (mainWindow) {
+        mainWindow.webContents.send('queue-updated', requestQueue);
+    }
+}
+
+function guestPageHtml() {
+    return readFileSync(path.join(__dirname, 'guest-page.html'), 'utf-8');
+}
+
+function sendJson(res, statusCode, data) {
+    const body = JSON.stringify(data);
+    res.writeHead(statusCode, {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+    });
+    res.end(body);
+}
+
+function readRequestBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', (chunk) => {
+            body += chunk;
+            if (body.length > 10_000) req.destroy(); // guard against abuse
+        });
+        req.on('end', () => resolve(body));
+        req.on('error', reject);
+    });
+}
+
+// Local HTTP server guests on the same network can reach via QR code, to
+// browse the current song folder and add requests to a shared queue.
+function ensureGuestServer() {
+    if (guestServer) return;
+
+    guestServer = createServer(async (req, res) => {
+        try {
+            const url = new URL(req.url, 'http://localhost');
+
+            if (req.method === 'GET' && url.pathname === '/') {
+                const html = guestPageHtml();
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(html);
+                return;
+            }
+
+            if (req.method === 'GET' && url.pathname === '/api/songs') {
+                if (!currentSongsFolder) return sendJson(res, 200, []);
+                return sendJson(res, 200, listVideoFiles(currentSongsFolder));
+            }
+
+            if (req.method === 'POST' && url.pathname === '/api/queue') {
+                const body = JSON.parse((await readRequestBody(req)) || '{}');
+                const song = typeof body.song === 'string' ? body.song : '';
+                const name = typeof body.name === 'string' ? body.name.trim().slice(0, 30) : '';
+
+                // Whitelist: the requested song must be a real file in the
+                // current folder, since this endpoint is reachable by any
+                // device on the network.
+                const validSongs = currentSongsFolder ? listVideoFiles(currentSongsFolder) : [];
+                if (!validSongs.includes(song)) {
+                    return sendJson(res, 400, { error: 'Unknown song' });
+                }
+
+                requestQueue.push({
+                    id: randomUUID(),
+                    song,
+                    name: name || 'Guest',
+                    requestedAt: Date.now(),
+                });
+                broadcastQueue();
+                return sendJson(res, 200, { ok: true });
+            }
+
+            res.writeHead(404);
+            res.end();
+        } catch (err) {
+            console.error('Guest server error:', err);
+            sendJson(res, 500, { error: 'Server error' });
+        }
+    });
+
+    guestServer.listen(0, '0.0.0.0', () => {
+        guestServerPort = guestServer.address().port;
+    });
+}
+
+ipcMain.handle('get-guest-url', async () => {
+    ensureGuestServer();
+    const address = getLanAddress();
+    if (!address) return null;
+    // Port is assigned asynchronously by listen(); wait for it briefly.
+    for (let i = 0; i < 20 && !guestServerPort; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+    }
+    if (!guestServerPort) return null;
+    return `http://${address}:${guestServerPort}/`;
+});
+
+ipcMain.handle('get-guest-qrcode', async (event, url) => {
+    if (typeof url !== 'string' || !url) throw new Error('Invalid URL');
+    return QRCode.toDataURL(url, { margin: 1, width: 320 });
+});
+
+ipcMain.handle('queue-get', () => requestQueue);
+
+ipcMain.handle('queue-remove', (event, id) => {
+    const index = requestQueue.findIndex((item) => item.id === id);
+    if (index !== -1) requestQueue.splice(index, 1);
+    broadcastQueue();
+    return requestQueue;
+});
+
+ipcMain.handle('queue-clear', () => {
+    requestQueue.length = 0;
+    broadcastQueue();
+    return requestQueue;
+});
 
 function runFfmpeg(args) {
     return new Promise((resolve, reject) => {
@@ -135,6 +289,7 @@ ipcMain.handle('convert-video', async (event, folderPath, fileName, forceReencod
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
+    if (guestServer) guestServer.close();
     if (process.platform !== 'darwin') {
         app.quit();
     }

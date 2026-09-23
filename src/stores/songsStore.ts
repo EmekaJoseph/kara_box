@@ -3,11 +3,19 @@ import { defineStore } from 'pinia'
 // import songsData from './songs.json';
 import { useStorage } from '@vueuse/core'
 
+export interface QueueRequest {
+  id: string
+  song: string
+  name: string
+  requestedAt: number
+}
+
 export const userSongsStore = defineStore('songsStore', () => {
   const selectedSong = ref<string>('')
   const playModal = ref<boolean>(false)
   const isPlayingSong = ref<boolean>(false)
   const hasIssueFindingFolder = ref<boolean>(false)
+  const queue = ref<QueueRequest[]>([])
 
   const settings = reactive({
     togglePanel: false,
@@ -38,6 +46,7 @@ export const userSongsStore = defineStore('songsStore', () => {
     isPlayingSong,
     songsDir,
     settings,
-    hasIssueFindingFolder
+    hasIssueFindingFolder,
+    queue
   }
 })

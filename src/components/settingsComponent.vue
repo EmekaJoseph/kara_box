@@ -51,6 +51,31 @@
                     </div>
                 </div>
 
+                <div class="settings-section">
+                    <span class="settings-label">Guest Requests</span>
+
+                    <div class="guest-card">
+                        <p class="guest-hint">Guests on the same Wi-Fi can scan this to request songs</p>
+                        <div v-if="guestLoading" class="guest-status">Starting up&hellip;</div>
+                        <div v-else-if="guestQrCode" class="guest-qr">
+                            <img :src="guestQrCode" alt="Guest request QR code" @click="showQrOverlay = true"
+                                class="cursor-pointer" />
+                            <button type="button" class="btn-enlarge" @click="showQrOverlay = true">
+                                <i class="bi bi-arrows-fullscreen"></i> Show large
+                            </button>
+                            <span class="guest-url">{{ guestUrl }}</span>
+                            <p class="guest-note">
+                                Can't connect? In Windows, set this Wi-Fi network to
+                                <strong>Private</strong> (Settings &rsaquo; Network &amp; Internet &rsaquo; Wi-Fi)
+                                &mdash; on Public networks, Windows blocks other devices from reaching this app. If
+                                this is a mobile hotspot, it may also have <strong>client isolation</strong> enabled,
+                                which blocks phone-to-laptop connections entirely and can't be fixed from here.
+                            </p>
+                        </div>
+                        <div v-else class="guest-status">Connect to Wi-Fi to enable guest requests</div>
+                    </div>
+                </div>
+
             </form>
         </div>
         <div class="settings-footer">
@@ -58,6 +83,21 @@
         </div>
 
     </div>
+
+    <Teleport to="body">
+        <Transition name="qr-fade">
+            <div v-if="showQrOverlay" class="qr-overlay" @click.self="showQrOverlay = false">
+                <div class="qr-dialog">
+                    <button type="button" class="qr-close" @click="showQrOverlay = false" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <span class="eyebrow"><i class="bi bi-qr-code"></i> Scan to request a song</span>
+                    <img :src="guestQrCode" alt="Guest request QR code" class="qr-large" />
+                    <span class="guest-url">{{ guestUrl }}</span>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -84,12 +124,36 @@ const songsStore = userSongsStore()
 
 const settingsComponentOpen = ref<any>(null)
 
+const guestUrl = ref('')
+const guestQrCode = ref('')
+const guestLoading = ref(false)
+const showQrOverlay = ref(false)
+
+async function loadGuestAccess() {
+    if (guestUrl.value || guestLoading.value) return
+    guestLoading.value = true
+    try {
+        //@ts-ignore
+        const url = await window.electronAPI.getGuestUrl()
+        if (url) {
+            guestUrl.value = url
+            //@ts-ignore
+            guestQrCode.value = await window.electronAPI.getGuestQrCode(url)
+        }
+    } catch (error) {
+        console.error('Failed to load guest access:', error)
+    } finally {
+        guestLoading.value = false
+    }
+}
+
 watch(() => songsStore.settings.togglePanel, () => {
     form.folder_name = songsStore.settings.folderName
     form.app_title = songsStore.settings.appTitle
     form.theme_color = songsStore.settings.themeColor
     showAlert.value = false;
     settingsComponentOpen.value.click()
+    loadGuestAccess()
 })
 
 watch(() => form, () => {
@@ -225,6 +289,152 @@ function handleAlert() {
 .theme-row-text small {
     color: var(--text-faint);
     font-size: 0.72rem;
+}
+
+.guest-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    text-align: center;
+}
+
+.guest-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.guest-status {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    padding: 1rem 0;
+}
+
+.guest-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guest-qr img {
+    width: 220px;
+    height: 220px;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    padding: 0.5rem;
+}
+
+.guest-url {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    word-break: break-all;
+}
+
+.btn-enlarge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--theme-color);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 0.9rem;
+}
+
+.btn-enlarge:hover {
+    background: var(--surface-strong);
+}
+
+.qr-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.qr-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    background: #120a17;
+    border: 2px solid var(--theme-color);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 70px -24px rgba(0, 0, 0, 0.8), 0 0 40px var(--theme-glow);
+    padding: 2.5rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.qr-dialog .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.qr-large {
+    width: min(70vw, 380px);
+    height: min(70vw, 380px);
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.qr-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-close:hover {
+    background: var(--surface-strong);
+}
+
+.qr-fade-enter-active,
+.qr-fade-leave-active {
+    transition: opacity 0.15s ease;
+}
+
+.qr-fade-enter-from,
+.qr-fade-leave-to {
+    opacity: 0;
+}
+
+.guest-note {
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    line-height: 1.5;
+    margin-top: 0.25rem;
+}
+
+.guest-note strong {
+    color: var(--text-muted);
 }
 
 .settings-footer {
