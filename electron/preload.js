@@ -13,7 +13,8 @@ window.addEventListener('DOMContentLoaded', () => {
 })
 
 
-// Expose the readFolder function
+// Expose the readFolder/convertVideo functions
 contextBridge.exposeInMainWorld('electronAPI', {
     readFolder: (folderPath) => ipcRenderer.invoke('read-folder', folderPath),
+    convertVideo: (folderPath, fileName, forceReencode) => ipcRenderer.invoke('convert-video', folderPath, fileName, forceReencode),
 });
