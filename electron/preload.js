@@ -27,4 +27,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('queue-updated', listener);
         return () => ipcRenderer.removeListener('queue-updated', listener);
     },
+    getProjectorStatus: () => ipcRenderer.invoke('get-projector-status'),
+    onProjectorStatus: (callback) => {
+        const listener = (event, active) => callback(active);
+        ipcRenderer.on('projector-status', listener);
+        return () => ipcRenderer.removeListener('projector-status', listener);
+    },
+    sendProjectorCommand: (command) => ipcRenderer.send('projector-command', command),
+    onProjectorCommand: (callback) => {
+        const listener = (event, command) => callback(command);
+        ipcRenderer.on('projector-command', listener);
+        return () => ipcRenderer.removeListener('projector-command', listener);
+    },
+    reportProjectorState: (state) => ipcRenderer.send('projector-state', state),
+    onProjectorState: (callback) => {
+        const listener = (event, state) => callback(state);
+        ipcRenderer.on('projector-state', listener);
+        return () => ipcRenderer.removeListener('projector-state', listener);
+    },
 });

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url';
 import { readdirSync, existsSync, mkdirSync, unlinkSync, readFileSync } from 'fs';
@@ -17,6 +17,7 @@ const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.avi', '.webm', '.mov', '.m4v
 const CONVERTED_DIR_NAME = '.converted';
 
 let mainWindow;
+let projectorWindow = null;
 let currentSongsFolder = null;
 let guestServer = null;
 let guestServerPort = null;
@@ -47,6 +48,74 @@ function createWindow() {
     }
 
     console.log('Vue app path:', path.join(__dirname, '../dist/index.html'));
+}
+
+function loadRoute(win, hash) {
+    if (process.env.NODE_ENV === 'development') {
+        win.loadURL(`http://localhost:8185/#${hash}`);
+    } else {
+        win.loadFile(path.join(__dirname, '../dist/index.html'), { hash });
+    }
+}
+
+function getSecondaryDisplay() {
+    const displays = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+    return displays.find((d) => d.id !== primary.id) || null;
+}
+
+function broadcastProjectorStatus() {
+    if (mainWindow) {
+        mainWindow.webContents.send('projector-status', !!projectorWindow);
+    }
+}
+
+function createProjectorWindow(display) {
+    projectorWindow = new BrowserWindow({
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: display.bounds.width,
+        height: display.bounds.height,
+        frame: false,
+        fullscreen: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        backgroundColor: '#000000',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+        },
+    });
+
+    loadRoute(projectorWindow, '/projector');
+
+    projectorWindow.on('closed', () => {
+        projectorWindow = null;
+        broadcastProjectorStatus();
+    });
+
+    broadcastProjectorStatus();
+}
+
+function destroyProjectorWindow() {
+    if (projectorWindow) {
+        projectorWindow.close();
+    }
+}
+
+// Keeps a second, dedicated fullscreen window in sync with whatever
+// secondary display (projector/TV) is currently connected, creating or
+// tearing it down as displays are plugged/unplugged.
+function syncProjectorWindow() {
+    const secondary = getSecondaryDisplay();
+    if (secondary && !projectorWindow) {
+        createProjectorWindow(secondary);
+    } else if (!secondary && projectorWindow) {
+        destroyProjectorWindow();
+    } else if (secondary && projectorWindow) {
+        projectorWindow.setBounds(secondary.bounds);
+    }
 }
 
 
@@ -207,6 +276,26 @@ ipcMain.handle('queue-clear', () => {
     return requestQueue;
 });
 
+ipcMain.handle('get-projector-status', () => !!projectorWindow);
+
+// Remote-control commands from the main window's UI (play/pause/seek/volume/
+// stop/load) forwarded straight to whichever window owns the actual <video>
+// element on the projector display.
+ipcMain.on('projector-command', (event, command) => {
+    if (projectorWindow) {
+        projectorWindow.webContents.send('projector-command', command);
+    }
+});
+
+// Playback state reported back from the projector window (current time,
+// duration, paused/ended/error) so the main window's remote control can
+// stay in sync.
+ipcMain.on('projector-state', (event, state) => {
+    if (mainWindow) {
+        mainWindow.webContents.send('projector-state', state);
+    }
+});
+
 function runFfmpeg(args) {
     return new Promise((resolve, reject) => {
         const proc = spawn(ffmpegPath, args);
@@ -286,10 +375,17 @@ ipcMain.handle('convert-video', async (event, folderPath, fileName, forceReencod
 
 
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+    createWindow();
+    syncProjectorWindow();
+    screen.on('display-added', syncProjectorWindow);
+    screen.on('display-removed', syncProjectorWindow);
+    screen.on('display-metrics-changed', syncProjectorWindow);
+});
 
 app.on('window-all-closed', () => {
     if (guestServer) guestServer.close();
+    if (projectorWindow) projectorWindow.close();
     if (process.platform !== 'darwin') {
         app.quit();
     }
