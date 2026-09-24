@@ -58,6 +58,8 @@
                             autoplay :src="videoSrc" @error="handleVideoError" @loadedmetadata="applyPendingVolume">
                             Your browser does not support the video tag.
                         </video>
+
+                        <pitchMeterBar :show="songsStore.isPlayingSong" />
                     </div>
                     <div class="modal-footer">
                         <input ref="fileBrowserBtn" type="file" class="d-none"
@@ -75,6 +77,7 @@
 <script setup lang="ts">
 import { userSongsStore } from '@/stores/songsStore';
 import log from '@/log';
+import pitchMeterBar from '@/components/pitchMeterBar.vue';
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 
@@ -278,6 +281,7 @@ onBeforeRouteLeave(() => {
 }
 
 .modal-body {
+    position: relative;
     background: #000000;
     display: flex;
     align-items: center;

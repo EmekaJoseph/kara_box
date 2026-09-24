@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, dialog, shell, session } from 'electron';
 import path, { dirname } from 'path'
 import { fileURLToPath } from 'url';
 import { readdirSync, existsSync, mkdirSync, unlinkSync, readFileSync, writeFileSync } from 'fs';
@@ -528,6 +528,12 @@ ipcMain.handle('get-volume-level', async (event, fullPath) => {
 
 
 app.on('ready', () => {
+    // The pitch meter needs the microphone; grant it explicitly rather than
+    // relying on Electron's undocumented "allow everything" default.
+    session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+        callback(true);
+    });
+
     createWindow();
     syncProjectorWindow();
     screen.on('display-added', syncProjectorWindow);
