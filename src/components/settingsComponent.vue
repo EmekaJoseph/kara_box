@@ -101,7 +101,7 @@
             </form>
         </div>
         <div class="settings-footer">
-            &copy; PROFFICTECH 2024.
+            &copy; Proffictech {{ thisYear }} &middot; v{{ appVersion }}
         </div>
 
     </div>
@@ -134,6 +134,9 @@ const form = reactive({
     theme_color: '',
     app_title: '',
 })
+
+const thisYear = new Date().getFullYear()
+const appVersion = __APP_VERSION__
 
 const showAlert = ref(false);
 
